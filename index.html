@@ -3,140 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EURO DTC IA - COMUNIDADE</title>
+    <title>EURO DTC IA - MASTER</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #0a0a0a; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
-        .neon-text { color: #00d4ff; text-shadow: 0 0 10px #00d4ff; padding: 15px; font-size: 1.5em; }
+        .neon-text { color: #00d4ff; text-shadow: 0 0 10px #00d4ff; padding: 15px; }
         .card { background: #151515; border: 1px solid #333; border-radius: 10px; padding: 20px; margin: 10px auto; max-width: 450px; text-align: left; }
-        input, textarea { padding: 12px; border-radius: 5px; border: 1px solid #333; width: 93%; margin-bottom: 10px; background: #222; color: #fff; }
-        button { background: #00d4ff; color: #000; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
-        
-        /* Sistema de Abas */
-        .tabs { display: flex; justify-content: center; margin-bottom: 20px; gap: 10px; }
-        .tab-btn { background: #222; color: #888; padding: 10px 20px; border-radius: 20px; cursor: pointer; border: 1px solid #333; flex: 1; }
-        .tab-btn.active { background: #00d4ff; color: #000; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        .relato-item { border-left: 3px solid #00d4ff; background: #1a1a1a; padding: 10px; margin-top: 10px; border-radius: 0 5px 5px 0; }
+        input { padding: 15px; border-radius: 5px; border: 1px solid #333; width: 88%; margin-bottom: 10px; background: #222; color: #fff; font-size: 16px; }
+        button { background: #00d4ff; color: #000; padding: 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; width: 95%; font-size: 16px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; text-transform: uppercase; font-weight: bold; margin-bottom: 10px; display: inline-block; }
+        .badge-dtc { background: #ff4444; color: #fff; }
+        .badge-param { background: #ffaa00; color: #000; }
+        .vip-box { border: 1px dashed #00ff00; color: #00ff00; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 14px; }
     </style>
 </head>
 <body>
 
     <h1 class="neon-text">EURO <span style="color:white">DIESEL</span> TECH</h1>
     
-    <div class="tabs">
-        <div class="tab-btn active" onclick="switchTab('busca')">BUSCAR DTC</div>
-        <div class="tab-btn" onclick="switchTab('relatos')">RELATOS</div>
+    <div class="card" style="text-align: center;">
+        <input type="text" id="dtcInput" placeholder="DIGITE O DTC OU PARÂMETRO">
+        <button onclick="buscarGeral()">CONSULTAR AGORA</button>
     </div>
 
-    <div id="busca" class="tab-content active">
-        <div class="card">
-            <input type="text" id="dtcInput" placeholder="CÓDIGO DTC (Ex: 4021)">
-            <button onclick="buscarFalha()">CONSULTAR IA MASTER</button>
-        </div>
-        <div id="resultado"></div>
-    </div>
-
-    <div id="relatos" class="tab-content">
-        <div class="card">
-            <h3>ENVIAR RELATO DE CONSERTO</h3>
-            <input type="text" id="relatoDtc" placeholder="Código do Erro">
-            <input type="text" id="relatoModelo" placeholder="Modelo (Ex: Scania R440 / Volvo FH 460)">
-            <textarea id="relatoTexto" rows="3" placeholder="Como você resolveu o problema?"></textarea>
-            <button onclick="enviarRelato()" style="background: #00ff00;">POSTAR NA COMUNIDADE</button>
-        </div>
-        <div id="listaRelatos"></div>
-    </div>
+    <div id="resultado"></div>
 
     <script>
         const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
         const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
         const supabaseClient = supabase.createClient(_URL, _KEY);
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
-            if(tabId === 'relatos') carregarRelatos();
-        }
-
-        // Substitua sua função buscarFalha por esta:
-async function buscarFalha() {
-    const busca = document.getElementById('dtcInput').value.trim();
-    const resDiv = document.getElementById('resultado');
-    resDiv.innerHTML = "<p>Buscando DTCs e Parâmetros...</p>";
-
-    // Busca Falhas
-    const resFalhas = await supabaseClient.from('falhas_dtc').select('*').ilike('codigo', `%${busca}%`);
-    
-    // Busca Parâmetros (Pesquisa por nome ou descrição)
-    const resParams = await supabaseClient.from('parametros_programacao').select('*').or(`sistema.ilike.%${busca}%,descricao_procedimento.ilike.%${busca}%`);
-
-    resDiv.innerHTML = "";
-
-    // Mostra Falhas
-    if (resFalhas.data) {
-        resFalhas.data.forEach(item => {
-            resDiv.innerHTML += `
-            <div class='card' style='border-left: 4px solid #00d4ff'>
-                <small>⚠️ FALHA | ${item.marca} | ${item.modulo}</small>
-                <h2>DTC: ${item.codigo}</h2>
-                <p><b>Descrição:</b> ${item.descricao}</p>
-                <p style='color:#00ff00'><b>Solução VIP:</b> ${item.solucao_vip}</p>
-            </div>`;
-        });
-    }
-
-    // Mostra Parâmetros de Programação
-    if (resParams.data) {
-        resParams.data.forEach(p => {
-            resDiv.innerHTML += `
-            <div class='card' style='border-left: 4px solid #ffaa00'>
-                <small>⚙️ PROGRAMAÇÃO | ${p.marca}</small>
-                <h3 style='color:#ffaa00'>${p.descricao_procedimento}</h3>
-                <p><b>Sistema:</b> ${p.sistema}</p>
-                <p><b>Parâmetros:</b> ${p.parametro_original} ➔ ${p.parametro_modificado}</p>
-                <p><b>Ferramenta:</b> ${p.ferramenta}</p>
-            </div>`;
-        });
-    }
-}
-
-        // --- SISTEMA DE RELATOS ---
-        async function enviarRelato() {
-            const codigo = document.getElementById('relatoDtc').value;
-            const modelo = document.getElementById('relatoModelo').value;
-            const texto = document.getElementById('relatoTexto').value;
-
-            const { error } = await supabaseClient.from('relatos_usuarios').insert([
-                { codigo_dtc: codigo, modelo_veiculo: modelo, relato: texto }
-            ]);
-
-            if (error) alert("Erro ao enviar");
-            else {
-                alert("Relato enviado com sucesso!");
-                carregarRelatos();
-            }
-        }
-
-        async function carregarRelatos() {
-            const resDiv = document.getElementById('listaRelatos');
-            resDiv.innerHTML = "Carregando relatos...";
+        async function buscarGeral() {
+            const busca = document.getElementById('dtcInput').value.trim();
+            const resDiv = document.getElementById('resultado');
+            if(!busca) return;
             
-            const { data } = await supabaseClient.from('relatos_usuarios').select('*').order('criado_em', { ascending: false });
+            resDiv.innerHTML = "Pesquisando no Banco de Dados...";
+
+            // 1. Busca na Tabela de Falhas (DTC)
+            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').ilike('codigo', `%${busca}%`);
+            
+            // 2. Busca na Tabela de Parâmetros
+            const { data: params } = await supabaseClient.from('parametros_programacao').select('*').or(`descricao_procedimento.ilike.%${busca}%,parametro_original.ilike.%${busca}%`);
 
             resDiv.innerHTML = "";
-            data.forEach(r => {
+
+            // MOSTRAR FALHAS ENCONTRADAS
+            falhas?.forEach(item => {
                 resDiv.innerHTML += `
-                <div class='card relato-item'>
-                    <b style='color:#00d4ff'>Erro: ${r.codigo_dtc}</b> | <span>${r.modelo_veiculo}</span>
-                    <p>${r.relato}</p>
-                    <small style='color:#888'>Postado em: ${new Date(r.criado_em).toLocaleDateString()}</small>
+                <div class='card'>
+                    <span class='badge badge-dtc'>FALHA DTC | ${item.marca} | ${item.modulo}</span>
+                    <h2 style='color:#00d4ff; margin: 5px 0;'>CÓDIGO: ${item.codigo}</h2>
+                    <p><b>O que é:</b> ${item.descricao}</p>
+                    <p><b>Causa comum:</b> ${item.solucao_publica}</p>
+                    <div class='vip-box'>💎 SOLUÇÃO MASTER: ${item.solucao_vip}</div>
                 </div>`;
             });
+
+            // MOSTRAR PARÂMETROS ENCONTRADOS
+            params?.forEach(p => {
+                resDiv.innerHTML += `
+                <div class='card'>
+                    <span class='badge badge-param'>PROGRAMAÇÃO | ${p.marca}</span>
+                    <h2 style='color:#ffaa00; margin: 5px 0;'>${p.descricao_procedimento}</h2>
+                    <p><b>Sistema:</b> ${p.sistema}</p>
+                    <p><b>Original:</b> ${p.parametro_original} ➔ <b>Modificar:</b> ${p.parametro_modificado}</p>
+                    <small>Ferramenta: ${p.ferramenta}</small>
+                </div>`;
+            });
+
+            if (resDiv.innerHTML === "") {
+                resDiv.innerHTML = "<div class='card'>Nenhum resultado encontrado para essa busca.</div>";
+            }
         }
     </script>
 </body>
