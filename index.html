@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EURO DIESEL TECH | SUPREME</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@100;300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --BG: #020408; --ACCENT: #00D4FF; --GOLD: #D4AF37; --BORDER: rgba(255, 255, 255, 0.08); }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; text-transform: uppercase; }
+        body { font-family: 'Inter', sans-serif; background: var(--BG); color: #F8FAFC; height: 100vh; overflow-y: auto; background-image: radial-gradient(circle at top right, #0F172A, #020408); }
+        
+        /* HEADER LUXO */
+        .TOP-BAR { width: 100%; padding: 25px; text-align: center; border-bottom: 1px solid var(--BORDER); backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 100; background: rgba(2, 4, 8, 0.9); }
+        .TOP-BAR::after { content: ""; position: absolute; bottom: -1px; left: 25%; width: 50%; height: 1px; background: var(--ACCENT); box-shadow: 0 0 15px var(--ACCENT); }
+        .BRAND { font-family: 'Orbitron'; font-weight: 900; letter-spacing: 5px; font-size: 1.2rem; }
+        .BRAND span { color: var(--ACCENT); }
+
+        /* BUSCA GIGANTE */
+        .SEARCH-BOX { padding: 30px 20px; text-align: center; }
+        .INPUT-TECH { width: 100%; max-width: 400px; background: rgba(255,255,255,0.03); border: 1px solid var(--BORDER); border-radius: 20px; padding: 20px; color: #FFF; font-family: 'Orbitron'; text-align: center; font-size: 1.8rem; letter-spacing: 5px; outline: none; transition: 0.3s; }
+        .INPUT-TECH:focus { border-color: var(--ACCENT); box-shadow: 0 0 30px rgba(0,212,255,0.1); }
+
+        /* RESULTADOS */
+        .RESULT-CONTAINER { padding: 0 20px 100px; max-width: 500px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .UNIT { background: rgba(255,255,255,0.02); border: 1px solid var(--BORDER); border-radius: 25px; padding: 25px; backdrop-filter: blur(10px); }
+        .UNIT-HEADER { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .SYSTEM-TAG { font-size: 0.6rem; color: var(--ACCENT); border: 1px solid var(--ACCENT); padding: 4px 8px; border-radius: 5px; font-weight: 900; }
+        
+        /* DICA VIP IA */
+        .VIP-BOX { margin-top: 20px; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 20px; padding: 15px; background: rgba(212, 175, 55, 0.02); position: relative; overflow: hidden; }
+        .LOCK-OVERLAY { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 4, 8, 0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(4px); cursor: pointer; }
+
+        .HIDDEN { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header class="TOP-BAR">
+        <div class="BRAND">EURO<span>DIESEL</span> TECH</div>
+    </header>
+
+    <div class="SEARCH-BOX">
+        <input type="number" class="INPUT-TECH" placeholder="DTC CODE" id="dtcInput" oninput="pesquisar()">
+    </div>
+
+    <div id="results" class="RESULT-CONTAINER">
+        </div>
+
+    <script>
+        // BANCO DE DADOS INICIAL (VAMOS ALIMENTAR ESSE CÉREBRO)
+        const bancoDTC = [
+            {
+                id: "50000",
+                sistema: "GMS SCANIA",
+                desc: "FALHA NO SENSOR DE POSIÇÃO DO ATUADOR DE EMBREAGEM (ECA).",
+                acao: "VERIFICAR ALIMENTAÇÃO DO MÓDULO E CONECTORES X21.",
+                vip: "ERRO COMUM: OXIDAÇÃO NO PINO 7. TESTAR TENSÃO DE 5V ANTES DA TROCA."
+            },
+            {
+                id: "50000",
+                sistema: "OPC SCANIA",
+                desc: "SINAL INVÁLIDO DE POSIÇÃO DA EMBREAGEM.",
+                acao: "REVISAR CHICOTE DA CAIXA E CALIBRAR VIA SCANNER.",
+                vip: "DICA IA: VERIFICAR DESGASTE NA ESFERA DO GARFO DE ACIONAMENTO."
+            }
+        ];
+
+        let isVIP = false; // Controle de acesso
+
+        function pesquisar() {
+            const busca = document.getElementById('dtcInput').value;
+            const container = document.getElementById('results');
+            container.innerHTML = "";
+
+            const resultados = bancoDTC.filter(f => f.id === busca);
+
+            resultados.forEach(f => {
+                const card = `
+                    <div class="UNIT">
+                        <div class="UNIT-HEADER">
+                            <div>
+                                <b style="font-family:Orbitron; font-size:1.5rem; color:var(--ACCENT)">${f.id}</b>
+                                <p style="font-size:0.5rem; color:#64748B; margin-top:5px;">SISTEMA ENCONTRADO</p>
+                            </div>
+                            <span class="SYSTEM-TAG">${f.sistema}</span>
+                        </div>
+                        <p style="font-size:0.8rem; line-height:1.4; color:#FFF; margin-bottom:15px;">${f.desc}</p>
+                        
+                        <div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:12px;">
+                            <b style="font-size:0.55rem; color:var(--ACCENT); display:block; margin-bottom:5px;">AÇÃO DE FÁBRICA:</b>
+                            <p style="font-size:0.7rem; color:#94A3B8;">${f.acao}</p>
+                        </div>
+
+                        <div class="VIP-BOX">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <i class="material-icons-outlined" style="color:var(--GOLD); font-size:1rem;">psychology</i>
+                                <b style="font-size:0.6rem; color:var(--GOLD); letter-spacing:1px;">EURO DTC IA:</b>
+                            </div>
+                            <p style="font-size:0.75rem; color:#FFF; font-style:italic;">"${f.vip}"</p>
+                            
+                            <div class="LOCK-OVERLAY ${isVIP ? 'HIDDEN' : ''}" onclick="solicitarVip()">
+                                <i class="material-icons-outlined" style="color:var(--GOLD)">lock</i>
+                                <b style="color:var(--GOLD); font-size:0.5rem; margin-top:8px; letter-spacing:2px;">CLIQUE PARA ACESSO VIP</b>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        function solicitarVip() {
+            alert("VOCÊ SERÁ DIRECIONADO PARA O MASTER LEANDRO PARA LIBERAR SEU TOKEN.");
+            window.open("https://wa.me/5569981128233?text=QUERO%20ACESSO%20VIP%20EURO%20DTC");
+        }
+    </script>
+</body>
+</html>
