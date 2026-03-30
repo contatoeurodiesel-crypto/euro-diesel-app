@@ -63,30 +63,47 @@
             if(tabId === 'relatos') carregarRelatos();
         }
 
-        // --- BUSCA DE DTC ---
-        async function buscarFalha() {
-            const codigo = document.getElementById('dtcInput').value.trim();
-            const resDiv = document.getElementById('resultado');
-            resDiv.innerHTML = "Buscando...";
+        // Substitua sua função buscarFalha por esta:
+async function buscarFalha() {
+    const busca = document.getElementById('dtcInput').value.trim();
+    const resDiv = document.getElementById('resultado');
+    resDiv.innerHTML = "<p>Buscando DTCs e Parâmetros...</p>";
 
-            const { data } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', codigo);
+    // Busca Falhas
+    const resFalhas = await supabaseClient.from('falhas_dtc').select('*').ilike('codigo', `%${busca}%`);
+    
+    // Busca Parâmetros (Pesquisa por nome ou descrição)
+    const resParams = await supabaseClient.from('parametros_programacao').select('*').or(`sistema.ilike.%${busca}%,descricao_procedimento.ilike.%${busca}%`);
 
-            if (!data || data.length === 0) {
-                resDiv.innerHTML = "<div class='card'>Não encontrado.</div>";
-                return;
-            }
+    resDiv.innerHTML = "";
 
-            resDiv.innerHTML = "";
-            data.forEach(item => {
-                resDiv.innerHTML += `
-                <div class='card'>
-                    <small>${item.marca} | ${item.modulo}</small>
-                    <h2 style='color:#00d4ff'>DTC: ${item.codigo}</h2>
-                    <p><b>Fábrica:</b> ${item.solucao_publica}</p>
-                    <p style='color:#00ff00'><b>VIP:</b> ${item.solucao_vip}</p>
-                </div>`;
-            });
-        }
+    // Mostra Falhas
+    if (resFalhas.data) {
+        resFalhas.data.forEach(item => {
+            resDiv.innerHTML += `
+            <div class='card' style='border-left: 4px solid #00d4ff'>
+                <small>⚠️ FALHA | ${item.marca} | ${item.modulo}</small>
+                <h2>DTC: ${item.codigo}</h2>
+                <p><b>Descrição:</b> ${item.descricao}</p>
+                <p style='color:#00ff00'><b>Solução VIP:</b> ${item.solucao_vip}</p>
+            </div>`;
+        });
+    }
+
+    // Mostra Parâmetros de Programação
+    if (resParams.data) {
+        resParams.data.forEach(p => {
+            resDiv.innerHTML += `
+            <div class='card' style='border-left: 4px solid #ffaa00'>
+                <small>⚙️ PROGRAMAÇÃO | ${p.marca}</small>
+                <h3 style='color:#ffaa00'>${p.descricao_procedimento}</h3>
+                <p><b>Sistema:</b> ${p.sistema}</p>
+                <p><b>Parâmetros:</b> ${p.parametro_original} ➔ ${p.parametro_modificado}</p>
+                <p><b>Ferramenta:</b> ${p.ferramenta}</p>
+            </div>`;
+        });
+    }
+}
 
         // --- SISTEMA DE RELATOS ---
         async function enviarRelato() {
