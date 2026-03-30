@@ -7,58 +7,55 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background: #0a0a0a; color: #fff; font-family: sans-serif; text-align: center; }
-        .neon-text { color: #00d4ff; text-shadow: 0 0 10px #00d4ff; }
+        .neon-text { color: #00d4ff; text-shadow: 0 0 10px #00d4ff; padding: 20px; }
         .card { background: #151515; border: 1px solid #333; border-radius: 10px; padding: 20px; margin: 20px auto; max-width: 400px; }
-        input { padding: 12px; border-radius: 5px; border: none; width: 80%; margin-bottom: 10px; }
+        input { padding: 12px; border-radius: 5px; border: none; width: 80%; margin-bottom: 10px; background: #222; color: #fff; }
         button { background: #00d4ff; color: #000; padding: 12px 25px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        .vip-lock { color: #ff4444; font-weight: bold; border: 1px dashed #ff4444; padding: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
     <h1 class="neon-text">EURO <span style="color:white">DIESEL</span> TECH</h1>
-    <p>IA DE DIAGNÓSTICO AVANÇADO</p>
-
     <div class="card">
-        <input type="text" id="dtcInput" placeholder="DIGITE O CÓDIGO DTC">
+        <input type="text" id="dtcInput" placeholder="DIGITE O CÓDIGO DTC (Ex: 50000)">
         <button onclick="buscarFalha()">CONSULTAR IA</button>
     </div>
-
     <div id="resultado"></div>
 
     <script>
         const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
         const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
-        const supabase = supabase.createClient(_URL, _KEY);
+        const supabaseClient = supabase.createClient(_URL, _KEY);
 
         async function buscarFalha() {
             const codigo = document.getElementById('dtcInput').value;
             const resDiv = document.getElementById('resultado');
-            resDiv.innerHTML = "Consultando Banco de Dados...";
+            resDiv.innerHTML = "<p>Buscando no banco...</p>";
 
-            const { data, error } = await supabase
-                .from('falhas_dtc')
-                .select('*')
-                .eq('codigo', codigo)
-                .single();
+            try {
+                const { data, error } = await supabaseClient
+                    .from('falhas_dtc')
+                    .select('*')
+                    .eq('codigo', codigo.trim());
 
-            if (error || !data) {
-                resDiv.innerHTML = "<div class='card'>Código não encontrado. Relatando para a IA Master...</div>";
-                return;
+                if (error) {
+                    resDiv.innerHTML = `<div class='card' style='color:red'>Erro no Banco: ${error.message}</div>`;
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    resDiv.innerHTML = "<div class='card'>Código não encontrado no banco.</div>";
+                    return;
+                }
+
+                const item = data[0];
+                resDiv.innerHTML = `<div class='card'>
+                    <h2 style='color:#00d4ff'>DTC: ${item.codigo}</h2>
+                    <p><b>Descrição:</b> ${item.descricao}</p>
+                    <p><b>Ação:</b> ${item.solucao_publica}</p>
+                </div>`;
+            } catch (err) {
+                resDiv.innerHTML = `<div class='card' style='color:orange'>Erro de Sistema: ${err.message}</div>`;
             }
-
-            let html = `<div class='card'>
-                <h2 class='neon-text'>DTC: ${data.codigo}</h2>
-                <p><b>Descrição:</b> ${data.descricao}</p>
-                <p><b>Ação Básica:</b> ${data.solucao_publica}</p>`;
-            
-            if (data.status === 'vip') {
-                html += `<div class='vip-lock'>🔒 SOLUÇÃO MASTER RESTRITA (ASSINANTES VIP)</div>`;
-            } else {
-                html += `<p style='color:#00ff00'><b>Solução Master:</b> ${data.solucao_vip}</p>`;
-            }
-
-            html += `</div>`;
-            resDiv.innerHTML = html;
         }
     </script>
 </body>
