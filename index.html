@@ -34,48 +34,64 @@
         const supabaseClient = supabase.createClient(_URL, _KEY);
 
         async function buscarGeral() {
-            const busca = document.getElementById('dtcInput').value.trim();
-            const resDiv = document.getElementById('resultado');
-            if(!busca) return;
-            
-            resDiv.innerHTML = "Pesquisando no Banco de Dados...";
+    let buscaRaw = document.getElementById('dtcInput').value.trim();
+    
+    // REGRA DE OURO: Remove todas as letras e deixa só os números para a busca
+    // Exemplo: Se o usuário digitar "SID 130", o sistema busca apenas "130"
+    const buscaNumerica = buscaRaw.replace(/\D/g, ""); 
+    
+    const resDiv = document.getElementById('resultado');
+    if(!buscaRaw) return;
+    
+    resDiv.innerHTML = "<p class='loading'>Consultando Banco de Dados Master...</p>";
 
-            // 1. Busca na Tabela de Falhas (DTC)
-            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').ilike('codigo', `%${busca}%`);
-            
-            // 2. Busca na Tabela de Parâmetros
-            const { data: params } = await supabaseClient.from('parametros_programacao').select('*').or(`descricao_procedimento.ilike.%${busca}%,parametro_original.ilike.%${busca}%`);
+    // 1. Busca na Tabela de Falhas (DTC) - Agora usando IGUALDADE EXATA (.eq)
+    // Buscamos tanto pelo termo original quanto pelo termo só com números
+    const { data: falhas } = await supabaseClient
+        .from('falhas_dtc')
+        .select('*')
+        .or(`codigo.eq.${buscaRaw},codigo.eq.${buscaNumerica}`);
+    
+    // 2. Busca na Tabela de Parâmetros
+    const { data: params } = await supabaseClient
+        .from('parametros_programacao')
+        .select('*')
+        .or(`descricao_procedimento.ilike.%${buscaRaw}%,parametro_original.ilike.%${buscaRaw}%`);
 
-            resDiv.innerHTML = "";
+    resDiv.innerHTML = "";
 
-            // MOSTRAR FALHAS ENCONTRADAS
-            falhas?.forEach(item => {
-                resDiv.innerHTML += `
-                <div class='card'>
-                    <span class='badge badge-dtc'>FALHA DTC | ${item.marca} | ${item.modulo}</span>
-                    <h2 style='color:#00d4ff; margin: 5px 0;'>CÓDIGO: ${item.codigo}</h2>
-                    <p><b>O que é:</b> ${item.descricao}</p>
-                    <p><b>Causa comum:</b> ${item.solucao_publica}</p>
-                    <div class='vip-box'>💎 SOLUÇÃO MASTER: ${item.solucao_vip}</div>
-                </div>`;
-            });
+    // MOSTRAR FALHAS (DTC)
+    if (falhas && falhas.length > 0) {
+        falhas.forEach(item => {
+            resDiv.innerHTML += `
+            <div class='card'>
+                <span class='badge badge-dtc'>FALHA DTC | ${item.marca} | ${item.modulo}</span>
+                <h2 style='color:#00d4ff; margin: 5px 0;'>CÓDIGO: ${item.codigo}</h2>
+                <p><b>Descrição:</b> ${item.descricao}</p>
+                <p><b>Ação de Fábrica:</b> ${item.solucao_publica}</p>
+                <div class='vip-box'>💎 SOLUÇÃO MASTER: ${item.solucao_vip}</div>
+            </div>`;
+        });
+    }
 
-            // MOSTRAR PARÂMETROS ENCONTRADOS
-            params?.forEach(p => {
-                resDiv.innerHTML += `
-                <div class='card'>
-                    <span class='badge badge-param'>PROGRAMAÇÃO | ${p.marca}</span>
-                    <h2 style='color:#ffaa00; margin: 5px 0;'>${p.descricao_procedimento}</h2>
-                    <p><b>Sistema:</b> ${p.sistema}</p>
-                    <p><b>Original:</b> ${p.parametro_original} ➔ <b>Modificar:</b> ${p.parametro_modificado}</p>
-                    <small>Ferramenta: ${p.ferramenta}</small>
-                </div>`;
-            });
+    // MOSTRAR PARÂMETROS
+    if (params && params.length > 0) {
+        params.forEach(p => {
+            resDiv.innerHTML += `
+            <div class='card'>
+                <span class='badge badge-param'>PROGRAMAÇÃO | ${p.marca}</span>
+                <h2 style='color:#ffaa00; margin: 5px 0;'>${p.descricao_procedimento}</h2>
+                <p><b>Sistema:</b> ${p.sistema}</p>
+                <p><b>Original:</b> ${p.parametro_original} ➔ <b>Modificar:</b> ${p.parametro_modificado}</p>
+                <small>Ferramenta: ${p.ferramenta}</small>
+            </div>`;
+        });
+    }
 
-            if (resDiv.innerHTML === "") {
-                resDiv.innerHTML = "<div class='card'>Nenhum resultado encontrado para essa busca.</div>";
-            }
-        }
+    if (resDiv.innerHTML === "") {
+        resDiv.innerHTML = "<div class='card' style='text-align:center'>Nenhum resultado exato para '<b>" + buscaRaw + "</b>'.</div>";
+    }
+}
     </script>
 </body>
 </html>
