@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EURO DTC - Master Intelligence</title>
+    <title>EURO DTC - Relatórios Master</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --neon: #00d4ff; --bg: #0a0a0a; --card: #151515; --scania: #e10000; --volvo: #003087; }
         body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
@@ -15,16 +14,29 @@
         .stat-card { background: var(--card); border: 1px solid #333; padding: 10px; border-radius: 8px; text-align: center; }
         .stat-number { display: block; font-size: 18px; font-weight: bold; color: var(--neon); }
         .stat-label { font-size: 9px; color: #888; text-transform: uppercase; }
-        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 15px; position: relative; }
-        .input-group { display: flex; gap: 8px; background: #222; border-radius: 8px; border: 1px solid #444; padding: 5px; align-items: center; }
-        input { flex: 1; padding: 12px; border: none; background: transparent; color: #fff; outline: none; font-size: 16px; }
-        .btn-voz { background: none; border: none; color: var(--neon); font-size: 20px; cursor: pointer; padding: 0 10px; }
-        .btn-busca { background: var(--neon); color: #000; padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .brand-logo { height: 25px; }
-        .relato-box { background: #1a1a1a; border-left: 3px solid var(--neon); padding: 10px; margin-top: 10px; font-size: 13px; font-style: italic; color: #ccc; }
-        .btn-relatar { background: transparent; border: 1px solid #555; color: #888; padding: 5px 10px; border-radius: 4px; font-size: 11px; margin-top: 10px; cursor: pointer; }
-        .btn-relatar:hover { border-color: var(--neon); color: var(--neon); }
+        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        .input-group { display: flex; gap: 8px; }
+        input { flex: 1; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
+        button { background: var(--neon); color: #000; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; display: inline-block; }
+        .badge-scania { background: var(--scania); color: #fff; }
+        .badge-volvo { background: var(--volvo); color: #fff; }
+        .btn-pdf { background: #ff4444; color: white; margin-top: 10px; width: 100%; font-size: 12px; }
+        
+        /* NOVO: Estilo para o cabeçalho do card com Logo */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        .brand-logo {
+            height: 25px;
+            width: auto;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
+        }
     </style>
 </head>
 <body>
@@ -39,9 +51,8 @@
 
     <div class="card">
         <div class="input-group">
-            <input type="text" id="dtcInput" placeholder="Fale ou digite o código...">
-            <button class="btn-voz" onclick="iniciarVoz()"><i class="fas fa-microphone"></i></button>
-            <button class="btn-busca" onclick="buscarGeral()">BUSCAR</button>
+            <input type="text" id="dtcInput" placeholder="Código DTC ou Parâmetro">
+            <button onclick="buscarGeral()">DIAGNOSTICAR</button>
         </div>
     </div>
 
@@ -49,84 +60,95 @@
 
     <script>
         const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
-        const _KEY = "SUA_KEY_AQUI"; // Mantenha a sua key original
+        const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
         const supabaseClient = supabase.createClient(_URL, _KEY);
 
-        // BUSCA POR VOZ
-        function iniciarVoz() {
-            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'pt-BR';
-            recognition.start();
-            document.getElementById('dtcInput').placeholder = "Ouvindo...";
-
-            recognition.onresult = (event) => {
-                const voz = event.results[0][0].transcript.toUpperCase().replace(".", "");
-                document.getElementById('dtcInput').value = voz;
-                buscarGeral();
-            };
+        async function initDashboard() {
+            try {
+                const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
+                const { count: v } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
+                const { count: p } = await supabaseClient.from('parametros_programacao').select('*', { count: 'exact', head: true });
+                
+                document.getElementById('countScania').innerText = s || 0;
+                document.getElementById('countVolvo').innerText = v || 0;
+                document.getElementById('countParams').innerText = p || 0;
+            } catch (error) {
+                console.error("Erro ao carregar dashboard:", error);
+            }
         }
 
         async function buscarGeral() {
             let buscaRaw = document.getElementById('dtcInput').value.trim();
+            const buscaNumerica = buscaRaw.replace(/\D/g, ""); 
             const resDiv = document.getElementById('resultado');
-            resDiv.innerHTML = "<p style='text-align:center'>Consultando IA Master...</p>";
+            resDiv.innerHTML = "Processando...";
 
-            // 1. Busca Falhas Oficiais
-            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.ilike.%${buscaRaw}%,descricao.ilike.%${buscaRaw}%`);
-            
-            // 2. Busca Relatos de Usuários (IA de proximidade por texto)
-            const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').ilike('relato', `%${buscaRaw}%`);
+            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.eq."${buscaRaw}",codigo.eq."${buscaNumerica}"`);
+            const { data: params } = await supabaseClient.from('parametros_programacao').select('*').or(`descricao_procedimento.ilike.%${buscaRaw}%,parametro_original.ilike.%${buscaRaw}%`);
 
             resDiv.innerHTML = "";
 
+            if ((!falhas || falhas.length === 0) && (!params || params.length === 0)) {
+                resDiv.innerHTML = "<div class='card'>Nenhum registro encontrado para esta busca.</div>";
+                return;
+            }
+
             falhas?.forEach(item => {
-                const marca = item.marca.toLowerCase();
-                const logo = marca === 'scania' ? 'https://www.scania.com/content/dam/scanianoe/market/master/experience-scania/scania-symbol.png' : 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Volvo_Logo.svg/1200px-Volvo_Logo.svg.png';
+                const marcaLower = item.marca.toLowerCase();
+                const bClass = marcaLower === 'scania' ? 'badge-scania' : 'badge-volvo';
                 
-                // Filtra relatos que pertencem a este código específico
-                const relatosDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+                // URLs dos logos (usando ícones oficiais/padrão)
+                const logoImg = marcaLower === 'scania' 
+                    ? 'https://www.scania.com/content/dam/scanianoe/market/master/experience-scania/scania-symbol.png'
+                    : 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Volvo_Logo.svg/1200px-Volvo_Logo.svg.png';
 
                 resDiv.innerHTML += `
                 <div class='card'>
                     <div class="card-header">
-                        <span class="badge ${marca === 'scania' ? 'badge-scania' : 'badge-volvo'}">${item.marca}</span>
-                        <img src="${logo}" class="brand-logo">
+                        <span class='badge ${bClass}'>${item.marca} | ${item.modulo}</span>
+                        <img src="${logoImg}" class="brand-logo">
                     </div>
-                    <h2 style="color:var(--neon)">DTC ${item.codigo}</h2>
-                    <p><b>Causa:</b> ${item.descricao}</p>
-                    <p style="color:#00ff00"><b>VIP Service:</b> ${item.solucao_vip}</p>
-                    
-                    ${relatosDesteDTC.map(r => `
-                        <div class="relato-box">
-                            <b>Dica de Campo (${r.usuario_nome}):</b><br>
-                            ${r.relato}
-                        </div>
-                    `).join('')}
+                    <h2 style='color:var(--neon)'>DTC ${item.codigo}</h2>
+                    <p><b>Análise:</b> ${item.descricao}</p>
+                    <p style='color:#00ff00'><b>Solução Master:</b> ${item.solucao_vip}</p>
+                    <button class="btn-pdf" onclick="gerarPDF('${item.marca}', '${item.codigo}', '${item.descricao}', '${item.solucao_vip}')">GERAR RELATÓRIO TÉCNICO PDF</button>
+                </div>`;
+            });
 
-                    <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                        <i class="fas fa-edit"></i> RELATAR COMO RESOLVI
-                    </button>
+            params?.forEach(p => {
+                resDiv.innerHTML += `
+                <div class='card' style='border-left: 4px solid #ffaa00'>
+                    <span class='badge' style='background:#ffaa00;color:#000'>PROGRAMAÇÃO | ${p.marca}</span>
+                    <h2 style='color:#ffaa00'>${p.descricao_procedimento}</h2>
+                    <p><b>Procedimento:</b> ${p.parametro_original} ➔ ${p.parametro_modificado}</p>
+                    <button class="btn-pdf" style="background:#ffaa00;color:#000" onclick="gerarPDF('${p.marca}', 'Prog', '${p.descricao_procedimento}', '${p.parametro_modificado}')">GERAR PDF DE PROGRAMAÇÃO</button>
                 </div>`;
             });
         }
 
-        async function enviarRelato(codigo, marca) {
-            const texto = prompt("Descreva como você resolveu esse problema:");
-            if (texto) {
-                const { error } = await supabaseClient.from('relatos_usuarios').insert([
-                    { dtc_vinculado: codigo, marca: marca, relato: texto, usuario_nome: 'Leandro Euro' }
-                ]);
-                if (!error) alert("Relato enviado! Vou revisar se ele será Público ou VIP.");
-                buscarGeral();
-            }
-        }
-
-        async function initDashboard() {
-            const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
-            const { count: v } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
-            document.getElementById('countScania').innerText = s || 0;
-            document.getElementById('countVolvo').innerText = v || 0;
-            document.getElementById('countParams').innerText = 24;
+        function gerarPDF(marca, codigo, desc, sol) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(22);
+            doc.setTextColor(0, 212, 255);
+            doc.text("EURO DIESEL - DIAGNÓSTICO MASTER", 20, 20);
+            doc.setFontSize(12);
+            doc.setTextColor(100);
+            doc.text(`Relatório Gerado em: ${new Date().toLocaleString()}`, 20, 30);
+            doc.line(20, 35, 190, 35);
+            doc.setTextColor(0);
+            doc.setFont(undefined, 'bold');
+            doc.text(`VEÍCULO: ${marca}`, 20, 45);
+            doc.text(`CÓDIGO/SISTEMA: ${codigo}`, 20, 55);
+            doc.setFont(undefined, 'normal');
+            doc.text("DESCRIÇÃO DA FALHA:", 20, 70);
+            doc.text(doc.splitTextToSize(desc, 160), 20, 75);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(0, 150, 0);
+            doc.text("SOLUÇÃO TÉCNICA SUGERIDA:", 20, 100);
+            doc.setFont(undefined, 'normal');
+            doc.text(doc.splitTextToSize(sol, 160), 20, 105);
+            doc.save(`Diagnostico_Euro_${codigo}.pdf`);
         }
 
         window.onload = initDashboard;
