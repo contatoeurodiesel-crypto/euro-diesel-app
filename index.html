@@ -139,12 +139,29 @@
         }
 
         async function initDashboard() {
-            const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
-            const { count: v } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
-            document.getElementById('countScania').innerText = s || 0;
-            document.getElementById('countVolvo').innerText = v || 0;
-            document.getElementById('countParams').innerText = 24;
-        }
+    try {
+        // Busca o total de Scania independente de qualquer outro filtro
+        const { count: s } = await supabaseClient.from('falhas_dtc')
+            .select('*', { count: 'exact', head: true })
+            .ilike('marca', 'Scania');
+            
+        // Busca o total de Volvo
+        const { count: v } = await supabaseClient.from('falhas_dtc')
+            .select('*', { count: 'exact', head: true })
+            .ilike('marca', 'Volvo');
+
+        // Busca o total de Programações (Progs)
+        const { count: p } = await supabaseClient.from('parametros_programacao')
+            .select('*', { count: 'exact', head: true });
+        
+        // Atualiza o painel na tela
+        document.getElementById('countScania').innerText = s || 0;
+        document.getElementById('countVolvo').innerText = v || 0;
+        document.getElementById('countParams').innerText = p || 0;
+    } catch (error) {
+        console.error("Erro no painel:", error);
+    }
+}
 
         window.onload = initDashboard;
     </script>
