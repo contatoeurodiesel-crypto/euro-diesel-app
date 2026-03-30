@@ -3,27 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EURO DTC IA - MASTER</title>
+    <title>EURO DTC - Engenharia Master</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background: #0a0a0a; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
-        .neon-text { color: #00d4ff; text-shadow: 0 0 10px #00d4ff; padding: 15px; }
-        .card { background: #151515; border: 1px solid #333; border-radius: 10px; padding: 20px; margin: 10px auto; max-width: 450px; text-align: left; }
-        input { padding: 15px; border-radius: 5px; border: 1px solid #333; width: 88%; margin-bottom: 10px; background: #222; color: #fff; font-size: 16px; }
-        button { background: #00d4ff; color: #000; padding: 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; width: 95%; font-size: 16px; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; text-transform: uppercase; font-weight: bold; margin-bottom: 10px; display: inline-block; }
-        .badge-dtc { background: #ff4444; color: #fff; }
+        :root { --neon: #00d4ff; --bg: #0a0a0a; --card: #151515; --scania: #e10000; --volvo: #003087; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .neon-text { color: var(--neon); text-shadow: 0 0 15px var(--neon); text-align: center; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        
+        /* Dashboard */
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: var(--card); border: 1px solid #333; padding: 15px; border-radius: 10px; text-align: center; }
+        .stat-number { display: block; font-size: 20px; font-weight: bold; color: var(--neon); }
+        .stat-label { font-size: 10px; color: #888; text-transform: uppercase; }
+
+        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        .input-group { display: flex; gap: 8px; }
+        input { flex: 1; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
+        button { background: var(--neon); color: #000; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 8px; display: inline-block; }
+        .badge-scania { background: var(--scania); color: #fff; }
+        .badge-volvo { background: var(--volvo); color: #fff; }
         .badge-param { background: #ffaa00; color: #000; }
-        .vip-box { border: 1px dashed #00ff00; color: #00ff00; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 14px; }
+        
+        .res-card { border-left: 4px solid var(--neon); text-align: left; }
+        .vip-box { background: rgba(0, 255, 0, 0.05); border: 1px dashed #00ff00; color: #00ff00; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <h1 class="neon-text">EURO <span style="color:white">DIESEL</span> TECH</h1>
-    
-    <div class="card" style="text-align: center;">
-        <input type="text" id="dtcInput" placeholder="DIGITE O DTC OU PARÂMETRO">
-        <button onclick="buscarGeral()">CONSULTAR AGORA</button>
+    <h1 class="neon-text">EURO <span style="color:white">DTC</span> MASTER</h1>
+    <p style="text-align:center; color:#888; font-size: 12px; margin-bottom: 20px;">ENGENHARIA AUTOMOTIVA AVANÇADA</p>
+
+    <div class="dashboard">
+        <div class="stat-card">
+            <span class="stat-number" id="countScania">--</span>
+            <span class="stat-label">Scania</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number" id="countVolvo">--</span>
+            <span class="stat-label">Volvo</span>
+        </div>
+        <div class="stat-card" style="border-color: #ffaa00;">
+            <span class="stat-number" id="countParams" style="color: #ffaa00;">--</span>
+            <span class="stat-label">Progs</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="input-group">
+            <input type="text" id="dtcInput" placeholder="Código DTC ou Nome do Parâmetro">
+            <button onclick="buscarGeral()">BUSCAR</button>
+        </div>
     </div>
 
     <div id="resultado"></div>
@@ -33,65 +64,54 @@
         const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
         const supabaseClient = supabase.createClient(_URL, _KEY);
 
+        // Inicializar Dashboard
+        async function initDashboard() {
+            const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).eq('marca', 'Scania');
+            const { count: v } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).eq('marca', 'Volvo');
+            const { count: p } = await supabaseClient.from('parametros_programacao').select('*', { count: 'exact', head: true });
+            
+            document.getElementById('countScania').innerText = s || 0;
+            document.getElementById('countVolvo').innerText = v || 0;
+            document.getElementById('countParams').innerText = p || 0;
+        }
+
         async function buscarGeral() {
-    let buscaRaw = document.getElementById('dtcInput').value.trim();
-    
-    // REGRA DE OURO: Remove todas as letras e deixa só os números para a busca
-    // Exemplo: Se o usuário digitar "SID 130", o sistema busca apenas "130"
-    const buscaNumerica = buscaRaw.replace(/\D/g, ""); 
-    
-    const resDiv = document.getElementById('resultado');
-    if(!buscaRaw) return;
-    
-    resDiv.innerHTML = "<p class='loading'>Consultando Banco de Dados Master...</p>";
+            let buscaRaw = document.getElementById('dtcInput').value.trim();
+            const buscaNumerica = buscaRaw.replace(/\D/g, ""); 
+            const resDiv = document.getElementById('resultado');
+            
+            resDiv.innerHTML = "<p style='text-align:center; color:#888;'>Consultando Telemetria...</p>";
 
-    // 1. Busca na Tabela de Falhas (DTC) - Agora usando IGUALDADE EXATA (.eq)
-    // Buscamos tanto pelo termo original quanto pelo termo só com números
-    const { data: falhas } = await supabaseClient
-        .from('falhas_dtc')
-        .select('*')
-        .or(`codigo.eq.${buscaRaw},codigo.eq.${buscaNumerica}`);
-    
-    // 2. Busca na Tabela de Parâmetros
-    const { data: params } = await supabaseClient
-        .from('parametros_programacao')
-        .select('*')
-        .or(`descricao_procedimento.ilike.%${buscaRaw}%,parametro_original.ilike.%${buscaRaw}%`);
+            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.eq."${buscaRaw}",codigo.eq."${buscaNumerica}"`);
+            const { data: params } = await supabaseClient.from('parametros_programacao').select('*').or(`descricao_procedimento.ilike.%${buscaRaw}%,parametro_original.ilike.%${buscaRaw}%`);
 
-    resDiv.innerHTML = "";
+            resDiv.innerHTML = "";
 
-    // MOSTRAR FALHAS (DTC)
-    if (falhas && falhas.length > 0) {
-        falhas.forEach(item => {
-            resDiv.innerHTML += `
-            <div class='card'>
-                <span class='badge badge-dtc'>FALHA DTC | ${item.marca} | ${item.modulo}</span>
-                <h2 style='color:#00d4ff; margin: 5px 0;'>CÓDIGO: ${item.codigo}</h2>
-                <p><b>Descrição:</b> ${item.descricao}</p>
-                <p><b>Ação de Fábrica:</b> ${item.solucao_publica}</p>
-                <div class='vip-box'>💎 SOLUÇÃO MASTER: ${item.solucao_vip}</div>
-            </div>`;
-        });
-    }
+            falhas?.forEach(item => {
+                const bClass = item.marca.toLowerCase() === 'scania' ? 'badge-scania' : 'badge-volvo';
+                resDiv.innerHTML += `
+                <div class='card res-card'>
+                    <span class='badge ${bClass}'>${item.marca} | ${item.modulo}</span>
+                    <h2 style='color:var(--neon); margin: 5px 0;'>DTC ${item.codigo}</h2>
+                    <p style='font-size:14px;'><b>Descrição:</b> ${item.descricao}</p>
+                    <div class='vip-box'><b>💎 SOLUÇÃO MASTER:</b><br>${item.solucao_vip}</div>
+                </div>`;
+            });
 
-    // MOSTRAR PARÂMETROS
-    if (params && params.length > 0) {
-        params.forEach(p => {
-            resDiv.innerHTML += `
-            <div class='card'>
-                <span class='badge badge-param'>PROGRAMAÇÃO | ${p.marca}</span>
-                <h2 style='color:#ffaa00; margin: 5px 0;'>${p.descricao_procedimento}</h2>
-                <p><b>Sistema:</b> ${p.sistema}</p>
-                <p><b>Original:</b> ${p.parametro_original} ➔ <b>Modificar:</b> ${p.parametro_modificado}</p>
-                <small>Ferramenta: ${p.ferramenta}</small>
-            </div>`;
-        });
-    }
+            params?.forEach(p => {
+                resDiv.innerHTML += `
+                <div class='card res-card' style='border-left-color: #ffaa00;'>
+                    <span class='badge badge-param'>PROGRAMAÇÃO | ${p.marca}</span>
+                    <h2 style='color:#ffaa00; margin: 5px 0;'>${p.descricao_procedimento}</h2>
+                    <p style='font-size:14px;'><b>Procedimento:</b> ${p.parametro_original} ➔ ${p.parametro_modificado}</p>
+                    <small style='color:#888;'>Ferramenta: ${p.ferramenta}</small>
+                </div>`;
+            });
 
-    if (resDiv.innerHTML === "") {
-        resDiv.innerHTML = "<div class='card' style='text-align:center'>Nenhum resultado exato para '<b>" + buscaRaw + "</b>'.</div>";
-    }
-}
+            if (resDiv.innerHTML === "") resDiv.innerHTML = "<div class='card'>Nenhum registro técnico encontrado.</div>";
+        }
+
+        initDashboard();
     </script>
 </body>
 </html>
