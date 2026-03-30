@@ -147,107 +147,63 @@
 
 
         async function buscarGeral() {
-
-            let buscaRaw = document.getElementById('dtcInput').value.trim();
-
-            if(!buscaRaw) return;
-
-
-
+            let busca = document.getElementById('dtcInput').value.trim();
+            if(!busca) return;
             const resDiv = document.getElementById('resultado');
-
-            resDiv.innerHTML = "<p style='text-align:center'>Processando Diagnóstico...</p>";
-
-
+            resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>IA EURO DTC Analisando Bancos de Dados...</p>";
 
             // 1. Busca Falhas Oficiais
-
-            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.ilike.%${buscaRaw}%,descricao.ilike.%${buscaRaw}%`);
-
+            const { data: falhas } = await supabaseClient.from('falhas_dtc')
+                .select('*')
+                .or(`codigo.ilike.%${busca}%,descricao.ilike.%${busca}%`);
             
-
-            // 2. Busca Relatos de Campo (IA de proximidade por texto)
-
-            const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').or(`dtc_vinculado.ilike.%${buscaRaw}%,relato.ilike.%${buscaRaw}%`);
-
-
+            // 2. Busca Relatos de Campo (Apenas os que você já aprovou como Público ou VIP)
+            const { data: relatos } = await supabaseClient.from('relatos_usuarios')
+                .select('*')
+                .or(`dtc_vinculado.ilike.%${busca}%,relato.ilike.%${busca}%`)
+                .neq('status_info', 'pendente'); // Não mostra o que ainda está pendente
 
             resDiv.innerHTML = "";
-
-
-
-            if ((!falhas || falhas.length === 0) && (!relatos || relatos.length === 0)) {
-
-                resDiv.innerHTML = "<div class='card'>Nenhum diagnóstico encontrado para este termo.</div>";
-
+            
+            if (!falhas?.length && !relatos?.length) {
+                resDiv.innerHTML = "<div class='card'>Nenhum histórico encontrado para esta falha.</div>";
                 return;
-
             }
 
-
-
+            // Exibe os Resultados
             falhas?.forEach(item => {
-
-                const marca = item.marca.toLowerCase();
-
-                const logo = marca === 'scania' ? 'https://www.scania.com/content/dam/scanianoe/market/master/experience-scania/scania-symbol.png' : 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Volvo_Logo.svg/1200px-Volvo_Logo.svg.png';
-
+                const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
                 
-
-                const relatosDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
-
-
-
                 resDiv.innerHTML += `
-
-                <div class='card'>
-
-                    <div class="card-header">
-
-                        <span class="badge ${marca === 'scania' ? 'badge-scania' : 'badge-volvo'}">${item.marca} | ${item.modulo}</span>
-
-                        <img src="${logo}" class="brand-logo">
-
+                <div class='card' style="border-left: 4px solid var(--neon)">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span class="badge" style="background:var(--neon); color:#000">${item.marca}</span>
+                        <span style="font-size:12px; color:#888">${item.modulo}</span>
                     </div>
-
-                    <h2 style="color:var(--neon)">DTC ${item.codigo}</h2>
-
-                    <p><b>Análise Técnica:</b> ${item.descricao}</p>
-
-                    <p style="color:#00ff00"><b>Solução Padrão:</b> ${item.solucao_vip}</p>
-
+                    <h2 style="margin:5px 0">CÓDIGO ${item.codigo}</h2>
+                    <p style="font-size:14px; color:#ccc">${item.descricao}</p>
                     
-
-                    <div id="lista-relatos-${item.codigo}">
-
-                        ${relatosDesteDTC.map(r => `
-
-                            <div class="relato-box ${r.status_info === 'vip' ? 'relato-vip' : 'relato-publico'}">
-
-                                <b><i class="fas fa-wrench"></i> Caso Real (${r.usuario_nome}):</b><br>
-
-                                ${r.relato}
-
-                                <br><small style="opacity:0.6">${r.status_info.toUpperCase()}</small>
-
-                            </div>
-
-                        `).join('')}
-
+                    <div style="background:#003300; padding:10px; border-radius:8px; margin-top:10px;">
+                        <b style="color:#00ff00"><i class="fas fa-check-circle"></i> SOLUÇÃO MASTER:</b><br>
+                        <span style="font-size:14px">${item.solucao_vip || 'Consulte o Suporte Euro Diesel'}</span>
                     </div>
 
-
+                    <div id="relatos-section" style="margin-top:15px">
+                        ${rDesteDTC.map(r => `
+                            <div class="relato-box" style="border-color: ${r.status_info === 'vip' ? '#ffaa00' : '#00ff00'}">
+                                <b style="color:${r.status_info === 'vip' ? '#ffaa00' : '#00ff00'}">
+                                    <i class="fas fa-tools"></i> EXPERIÊNCIA ${r.status_info.toUpperCase()}:
+                                </b><br>
+                                <span style="font-style:italic">"${r.relato}"</span>
+                            </div>
+                        `).join('')}
+                    </div>
 
                     <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-
-                        <i class="fas fa-plus-circle"></i> ADICIONAR EXPERIÊNCIA DE CAMPO
-
+                        <i class="fas fa-edit"></i> COMPARTILHAR COMO RESOLVI
                     </button>
-
                 </div>`;
-
             });
-
         }
 
 
