@@ -8,22 +8,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --neon: #00d4ff; --bg: #0a0a0a; --card: #151515; --scania: #e10000; --volvo: #003087; }
+        :root { --neon: #00d4ff; --bg: #0a0a0a; --card: #151515; --scania: #e10000; --volvo: #003087; --vip: #ffaa00; }
         body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
         .neon-text { color: var(--neon); text-shadow: 0 0 15px var(--neon); text-align: center; text-transform: uppercase; letter-spacing: 2px; }
         .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
         .stat-card { background: var(--card); border: 1px solid #333; padding: 10px; border-radius: 8px; text-align: center; }
         .stat-number { display: block; font-size: 18px; font-weight: bold; color: var(--neon); }
         .stat-label { font-size: 9px; color: #888; text-transform: uppercase; }
-        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 15px; position: relative; }
+        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
         .input-group { display: flex; gap: 8px; background: #222; border-radius: 8px; border: 1px solid #444; padding: 5px; align-items: center; }
         input { flex: 1; padding: 12px; border: none; background: transparent; color: #fff; outline: none; font-size: 16px; }
         .btn-voz { background: none; border: none; color: var(--neon); font-size: 20px; cursor: pointer; padding: 0 10px; }
-        .btn-busca { background: var(--neon); color: #000; padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; }
+        .btn-busca { background: var(--neon); color: #000; padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .brand-logo { height: 25px; }
-        .relato-box { background: #1a1a1a; border-left: 3px solid var(--neon); padding: 10px; margin-top: 10px; font-size: 13px; font-style: italic; color: #ccc; }
-        .btn-relatar { background: transparent; border: 1px solid #555; color: #888; padding: 5px 10px; border-radius: 4px; font-size: 11px; margin-top: 10px; cursor: pointer; }
+        
+        /* Estilo dos Relatos de Usuários */
+        .relato-box { padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
+        .relato-vip { border-left: 4px solid var(--vip); background: rgba(255, 170, 0, 0.1); color: #ffcc66; }
+        .relato-publico { border-left: 4px solid #00ff00; background: rgba(0, 255, 0, 0.05); color: #ccffcc; }
+        
+        .btn-relatar { background: transparent; border: 1px solid #444; color: #888; padding: 8px; border-radius: 6px; width: 100%; margin-top: 15px; cursor: pointer; font-size: 11px; }
         .btn-relatar:hover { border-color: var(--neon); color: var(--neon); }
     </style>
 </head>
@@ -39,8 +44,8 @@
 
     <div class="card">
         <div class="input-group">
-            <input type="text" id="dtcInput" placeholder="Fale ou digite o código...">
-            <button class="btn-voz" onclick="iniciarVoz()"><i class="fas fa-microphone"></i></button>
+            <input type="text" id="dtcInput" placeholder="Código, Peça ou Fale...">
+            <button class="btn-voz" onclick="iniciarVoz()" title="Busca por Voz"><i class="fas fa-microphone"></i></button>
             <button class="btn-busca" onclick="buscarGeral()">BUSCAR</button>
         </div>
     </div>
@@ -48,16 +53,17 @@
     <div id="resultado"></div>
 
     <script>
+        // Use as suas credenciais originais aqui
         const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
-        const _KEY = "SUA_KEY_AQUI"; // Mantenha a sua key original
+        const _KEY = "SUA_KEY_AQUI"; 
         const supabaseClient = supabase.createClient(_URL, _KEY);
 
-        // BUSCA POR VOZ
+        // BUSCA POR VOZ (RECONHECIMENTO DE FALA)
         function iniciarVoz() {
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             recognition.lang = 'pt-BR';
             recognition.start();
-            document.getElementById('dtcInput').placeholder = "Ouvindo...";
+            document.getElementById('dtcInput').placeholder = "Ouvindo o Mestre...";
 
             recognition.onresult = (event) => {
                 const voz = event.results[0][0].transcript.toUpperCase().replace(".", "");
@@ -68,56 +74,67 @@
 
         async function buscarGeral() {
             let buscaRaw = document.getElementById('dtcInput').value.trim();
+            if(!buscaRaw) return;
+
             const resDiv = document.getElementById('resultado');
-            resDiv.innerHTML = "<p style='text-align:center'>Consultando IA Master...</p>";
+            resDiv.innerHTML = "<p style='text-align:center'>Processando Diagnóstico...</p>";
 
             // 1. Busca Falhas Oficiais
             const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.ilike.%${buscaRaw}%,descricao.ilike.%${buscaRaw}%`);
             
-            // 2. Busca Relatos de Usuários (IA de proximidade por texto)
-            const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').ilike('relato', `%${buscaRaw}%`);
+            // 2. Busca Relatos de Campo (IA de proximidade por texto)
+            const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').or(`dtc_vinculado.ilike.%${buscaRaw}%,relato.ilike.%${buscaRaw}%`);
 
             resDiv.innerHTML = "";
+
+            if ((!falhas || falhas.length === 0) && (!relatos || relatos.length === 0)) {
+                resDiv.innerHTML = "<div class='card'>Nenhum diagnóstico encontrado para este termo.</div>";
+                return;
+            }
 
             falhas?.forEach(item => {
                 const marca = item.marca.toLowerCase();
                 const logo = marca === 'scania' ? 'https://www.scania.com/content/dam/scanianoe/market/master/experience-scania/scania-symbol.png' : 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Volvo_Logo.svg/1200px-Volvo_Logo.svg.png';
                 
-                // Filtra relatos que pertencem a este código específico
                 const relatosDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
 
                 resDiv.innerHTML += `
                 <div class='card'>
                     <div class="card-header">
-                        <span class="badge ${marca === 'scania' ? 'badge-scania' : 'badge-volvo'}">${item.marca}</span>
+                        <span class="badge ${marca === 'scania' ? 'badge-scania' : 'badge-volvo'}">${item.marca} | ${item.modulo}</span>
                         <img src="${logo}" class="brand-logo">
                     </div>
                     <h2 style="color:var(--neon)">DTC ${item.codigo}</h2>
-                    <p><b>Causa:</b> ${item.descricao}</p>
-                    <p style="color:#00ff00"><b>VIP Service:</b> ${item.solucao_vip}</p>
+                    <p><b>Análise Técnica:</b> ${item.descricao}</p>
+                    <p style="color:#00ff00"><b>Solução Padrão:</b> ${item.solucao_vip}</p>
                     
-                    ${relatosDesteDTC.map(r => `
-                        <div class="relato-box">
-                            <b>Dica de Campo (${r.usuario_nome}):</b><br>
-                            ${r.relato}
-                        </div>
-                    `).join('')}
+                    <div id="lista-relatos-${item.codigo}">
+                        ${relatosDesteDTC.map(r => `
+                            <div class="relato-box ${r.status_info === 'vip' ? 'relato-vip' : 'relato-publico'}">
+                                <b><i class="fas fa-wrench"></i> Caso Real (${r.usuario_nome}):</b><br>
+                                ${r.relato}
+                                <br><small style="opacity:0.6">${r.status_info.toUpperCase()}</small>
+                            </div>
+                        `).join('')}
+                    </div>
 
                     <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                        <i class="fas fa-edit"></i> RELATAR COMO RESOLVI
+                        <i class="fas fa-plus-circle"></i> ADICIONAR EXPERIÊNCIA DE CAMPO
                     </button>
                 </div>`;
             });
         }
 
         async function enviarRelato(codigo, marca) {
-            const texto = prompt("Descreva como você resolveu esse problema:");
+            const texto = prompt("Como você resolveu esse problema na prática? (Dica de Ouro)");
             if (texto) {
                 const { error } = await supabaseClient.from('relatos_usuarios').insert([
-                    { dtc_vinculado: codigo, marca: marca, relato: texto, usuario_nome: 'Leandro Euro' }
+                    { dtc_vinculado: codigo, marca: marca, relato: texto, usuario_nome: 'Leandro Euro', status_info: 'vip' }
                 ]);
-                if (!error) alert("Relato enviado! Vou revisar se ele será Público ou VIP.");
-                buscarGeral();
+                if (!error) {
+                    alert("Sua experiência foi salva como VIP! Vou processar agora.");
+                    buscarGeral();
+                }
             }
         }
 
