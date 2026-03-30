@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EURO DTC - Painel de Controle</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --neon: #00d4ff; --bg: #0a0a0a; --card: #151515; --vip: #ffaa00; --publico: #00ff00; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; }
+        .header { border-bottom: 2px solid var(--neon); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+        .relato-card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .dtc-tag { background: var(--neon); color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .status-pendente { color: #ff0000; font-weight: bold; }
+        .acoes { margin-top: 15px; display: flex; gap: 10px; }
+        button { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; flex: 1; }
+        .btn-vip { background: var(--vip); color: #000; }
+        .btn-publico { background: var(--publico); color: #000; }
+        .btn-excluir { background: #555; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2><i class="fas fa-user-shield"></i> MODERAÇÃO EURO DTC</h2>
+        <a href="index.html" style="color: var(--neon); text-decoration: none;">Voltar ao App</a>
+    </div>
+
+    <div id="lista-pendentes">
+        <p style="text-align: center;">Carregando novos relatos...</p>
+    </div>
+
+    <script>
+        const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
+        const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
+        const supabaseClient = supabase.createClient(_URL, _KEY);
+
+        async function carregarRelatos() {
+            const { data, error } = await supabaseClient
+                .from('relatos_usuarios')
+                .select('*')
+                .eq('status_info', 'pendente');
+
+            const container = document.getElementById('lista-pendentes');
+            container.innerHTML = "";
+
+            if (data.length === 0) {
+                container.innerHTML = "<p style='text-align: center;'>Nenhum relato novo para aprovar. Tudo limpo!</p>";
+                return;
+            }
+
+            data.forEach(r => {
+                container.innerHTML += `
+                    <div class="relato-card">
+                        <p><span class="dtc-tag">DTC ${r.dtc_vinculado}</span> | <b>Marca:</b> ${r.marca}</p>
+                        <p style="background: #222; padding: 10px; border-radius: 6px;">"${r.relato}"</p>
+                        <p style="font-size: 12px; color: #888;">Enviado por: ${r.usuario_nome}</p>
+                        <div class="acoes">
+                            <button class="btn-vip" onclick="atualizarStatus(${r.id}, 'vip')">TORNAR VIP</button>
+                            <button class="btn-publico" onclick="atualizarStatus(${r.id}, 'publico')">TORNAR PÚBLICO</button>
+                            <button class="btn-excluir" onclick="excluirRelato(${r.id})">EXCLUIR</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function atualizarStatus(id, novoStatus) {
+            const { error } = await supabaseClient
+                .from('relatos_usuarios')
+                .update({ status_info: novoStatus })
+                .eq('id', id);
+            
+            if (!error) {
+                alert("Relato aprovado como " + novoStatus.toUpperCase());
+                carregarRelatos();
+            }
+        }
+
+        async function excluirRelato(id) {
+            if(confirm("Tem certeza que deseja apagar essa informação?")) {
+                await supabaseClient.from('relatos_usuarios').delete().eq('id', id);
+                carregarRelatos();
+            }
+        }
+
+        window.onload = carregarRelatos;
+    </script>
+</body>
+</html>
