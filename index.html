@@ -18,10 +18,25 @@
         .input-group { display: flex; gap: 8px; }
         input { flex: 1; padding: 15px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; outline: none; }
         button { background: var(--neon); color: #000; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 8px; display: inline-block; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; display: inline-block; }
         .badge-scania { background: var(--scania); color: #fff; }
         .badge-volvo { background: var(--volvo); color: #fff; }
         .btn-pdf { background: #ff4444; color: white; margin-top: 10px; width: 100%; font-size: 12px; }
+        
+        /* NOVO: Estilo para o cabeçalho do card com Logo */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        .brand-logo {
+            height: 25px;
+            width: auto;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2));
+        }
     </style>
 </head>
 <body>
@@ -48,7 +63,6 @@
         const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
         const supabaseClient = supabase.createClient(_URL, _KEY);
 
-        // FUNÇÃO CORRIGIDA COM ILIKE PARA NÃO ZERAR O DASHBOARD
         async function initDashboard() {
             try {
                 const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
@@ -69,7 +83,6 @@
             const resDiv = document.getElementById('resultado');
             resDiv.innerHTML = "Processando...";
 
-            // Busca nas falhas e nos parâmetros
             const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.eq."${buscaRaw}",codigo.eq."${buscaNumerica}"`);
             const { data: params } = await supabaseClient.from('parametros_programacao').select('*').or(`descricao_procedimento.ilike.%${buscaRaw}%,parametro_original.ilike.%${buscaRaw}%`);
 
@@ -81,10 +94,20 @@
             }
 
             falhas?.forEach(item => {
-                const bClass = item.marca.toLowerCase() === 'scania' ? 'badge-scania' : 'badge-volvo';
+                const marcaLower = item.marca.toLowerCase();
+                const bClass = marcaLower === 'scania' ? 'badge-scania' : 'badge-volvo';
+                
+                // URLs dos logos (usando ícones oficiais/padrão)
+                const logoImg = marcaLower === 'scania' 
+                    ? 'https://www.scania.com/content/dam/scanianoe/market/master/experience-scania/scania-symbol.png'
+                    : 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Volvo_Logo.svg/1200px-Volvo_Logo.svg.png';
+
                 resDiv.innerHTML += `
                 <div class='card'>
-                    <span class='badge ${bClass}'>${item.marca} | ${item.modulo}</span>
+                    <div class="card-header">
+                        <span class='badge ${bClass}'>${item.marca} | ${item.modulo}</span>
+                        <img src="${logoImg}" class="brand-logo">
+                    </div>
                     <h2 style='color:var(--neon)'>DTC ${item.codigo}</h2>
                     <p><b>Análise:</b> ${item.descricao}</p>
                     <p style='color:#00ff00'><b>Solução Master:</b> ${item.solucao_vip}</p>
@@ -128,7 +151,6 @@
             doc.save(`Diagnostico_Euro_${codigo}.pdf`);
         }
 
-        // Garante que o dashboard carregue ao abrir
         window.onload = initDashboard;
     </script>
 </body>
