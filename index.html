@@ -1,169 +1,120 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EURO DTC - Master Intelligence</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root { --neon: #00d4ff; --bg: #0a0a0a; --card: #151515; --scania: #e10000; --volvo: #003087; --vip: #ffaa00; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
-        .neon-text { color: var(--neon); text-shadow: 0 0 15px var(--neon); text-align: center; text-transform: uppercase; letter-spacing: 2px; }
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
-        .stat-card { background: var(--card); border: 1px solid #333; padding: 10px; border-radius: 8px; text-align: center; }
-        .stat-number { display: block; font-size: 18px; font-weight: bold; color: var(--neon); }
-        .stat-label { font-size: 9px; color: #888; text-transform: uppercase; }
-        .card { background: var(--card); border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
-        .input-group { display: flex; gap: 8px; background: #222; border-radius: 8px; border: 1px solid #444; padding: 5px; align-items: center; }
-        input { flex: 1; padding: 12px; border: none; background: transparent; color: #fff; outline: none; font-size: 16px; }
-        .btn-voz { background: none; border: none; color: var(--neon); font-size: 20px; cursor: pointer; padding: 0 10px; }
-        .btn-busca { background: var(--neon); color: #000; padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .brand-logo { height: 25px; }
-        
-        /* Estilo dos Relatos de Usuários */
-        .relato-box { padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 13px; line-height: 1.4; }
-        .relato-vip { border-left: 4px solid var(--vip); background: rgba(255, 170, 0, 0.1); color: #ffcc66; }
-        .relato-publico { border-left: 4px solid #00ff00; background: rgba(0, 255, 0, 0.05); color: #ccffcc; }
-        
-        .btn-relatar { background: transparent; border: 1px solid #444; color: #888; padding: 8px; border-radius: 6px; width: 100%; margin-top: 15px; cursor: pointer; font-size: 11px; }
-        .btn-relatar:hover { border-color: var(--neon); color: var(--neon); }
-    </style>
-</head>
-<body>
+<script>
+    // CREDENCIAIS RECUPERADAS DO SEU PROJETO
+    const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
+    const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
+    const supabaseClient = supabase.createClient(_URL, _KEY);
 
-    <h1 class="neon-text">EURO <span style="color:white">DTC</span> MASTER</h1>
-    
-    <div class="dashboard">
-        <div class="stat-card"> <span class="stat-number" id="countScania">--</span> <span class="stat-label">Scania</span> </div>
-        <div class="stat-card"> <span class="stat-number" id="countVolvo">--</span> <span class="stat-label">Volvo</span> </div>
-        <div class="stat-card"> <span class="stat-number" id="countParams">--</span> <span class="stat-label">Progs</span> </div>
-    </div>
-
-    <div class="card">
-        <div class="input-group">
-            <input type="text" id="dtcInput" placeholder="Código, Peça ou Fale...">
-            <button class="btn-voz" onclick="iniciarVoz()" title="Busca por Voz"><i class="fas fa-microphone"></i></button>
-            <button class="btn-busca" onclick="buscarGeral()">BUSCAR</button>
-        </div>
-    </div>
-
-    <div id="resultado"></div>
-
-    <script>
-        // Use as suas credenciais originais aqui
-        const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
-        const _KEY = "SUA_KEY_AQUI"; 
-        const supabaseClient = supabase.createClient(_URL, _KEY);
-
-        // BUSCA POR VOZ (RECONHECIMENTO DE FALA)
-        function iniciarVoz() {
-            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'pt-BR';
-            recognition.start();
-            document.getElementById('dtcInput').placeholder = "Ouvindo o Mestre...";
-
-            recognition.onresult = (event) => {
-                const voz = event.results[0][0].transcript.toUpperCase().replace(".", "");
-                document.getElementById('dtcInput').value = voz;
-                buscarGeral();
-            };
-        }
-
-        async function buscarGeral() {
-            let buscaRaw = document.getElementById('dtcInput').value.trim();
-            if(!buscaRaw) return;
-
-            const resDiv = document.getElementById('resultado');
-            resDiv.innerHTML = "<p style='text-align:center'>Processando Diagnóstico...</p>";
-
-            // 1. Busca Falhas Oficiais
-            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.ilike.%${buscaRaw}%,descricao.ilike.%${buscaRaw}%`);
-            
-            // 2. Busca Relatos de Campo (IA de proximidade por texto)
-            const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').or(`dtc_vinculado.ilike.%${buscaRaw}%,relato.ilike.%${buscaRaw}%`);
-
-            resDiv.innerHTML = "";
-
-            if ((!falhas || falhas.length === 0) && (!relatos || relatos.length === 0)) {
-                resDiv.innerHTML = "<div class='card'>Nenhum diagnóstico encontrado para este termo.</div>";
-                return;
-            }
-
-            falhas?.forEach(item => {
-                const marca = item.marca.toLowerCase();
-                const logo = marca === 'scania' ? 'https://www.scania.com/content/dam/scanianoe/market/master/experience-scania/scania-symbol.png' : 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Volvo_Logo.svg/1200px-Volvo_Logo.svg.png';
+    // DASHBOARD BLINDADO - CONTA TUDO NA TABELA
+    async function initDashboard() {
+        console.log("Iniciando contagem do Dashboard...");
+        try {
+            // Conta Scania (ignora maiúscula/minúscula)
+            const { count: s, error: errS } = await supabaseClient
+                .from('falhas_dtc')
+                .select('*', { count: 'exact', head: true })
+                .ilike('marca', 'Scania');
                 
-                const relatosDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+            // Conta Volvo
+            const { count: v, error: errV } = await supabaseClient
+                .from('falhas_dtc')
+                .select('*', { count: 'exact', head: true })
+                .ilike('marca', 'Volvo');
 
-                resDiv.innerHTML += `
-                <div class='card'>
-                    <div class="card-header">
-                        <span class="badge ${marca === 'scania' ? 'badge-scania' : 'badge-volvo'}">${item.marca} | ${item.modulo}</span>
-                        <img src="${logo}" class="brand-logo">
-                    </div>
-                    <h2 style="color:var(--neon)">DTC ${item.codigo}</h2>
-                    <p><b>Análise Técnica:</b> ${item.descricao}</p>
-                    <p style="color:#00ff00"><b>Solução Padrão:</b> ${item.solucao_vip}</p>
-                    
-                    <div id="lista-relatos-${item.codigo}">
-                        ${relatosDesteDTC.map(r => `
-                            <div class="relato-box ${r.status_info === 'vip' ? 'relato-vip' : 'relato-publico'}">
-                                <b><i class="fas fa-wrench"></i> Caso Real (${r.usuario_nome}):</b><br>
-                                ${r.relato}
-                                <br><small style="opacity:0.6">${r.status_info.toUpperCase()}</small>
-                            </div>
-                        `).join('')}
-                    </div>
+            // Conta Progs
+            const { count: p, error: errP } = await supabaseClient
+                .from('parametros_programacao')
+                .select('*', { count: 'exact', head: true });
+            
+            if (errS || errV || errP) console.error("Erro na contagem:", {errS, errV, errP});
 
-                    <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                        <i class="fas fa-plus-circle"></i> ADICIONAR EXPERIÊNCIA DE CAMPO
-                    </button>
-                </div>`;
-            });
+            // Atualiza os números na tela
+            document.getElementById('countScania').innerText = s || 0;
+            document.getElementById('countVolvo').innerText = v || 0;
+            document.getElementById('countParams').innerText = p || 0;
+            
+            console.log("Dashboard atualizado com sucesso!");
+        } catch (error) {
+            console.error("Erro fatal no painel:", error);
+        }
+    }
+
+    // BUSCA POR VOZ (RECONHECIMENTO DE FALA)
+    function iniciarVoz() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'pt-BR';
+        recognition.start();
+        document.getElementById('dtcInput').placeholder = "Ouvindo o Mestre...";
+
+        recognition.onresult = (event) => {
+            const voz = event.results[0][0].transcript.toUpperCase().replace(".", "");
+            document.getElementById('dtcInput').value = voz;
+            buscarGeral();
+        };
+    }
+
+    async function buscarGeral() {
+        let buscaRaw = document.getElementById('dtcInput').value.trim();
+        if(!buscaRaw) return;
+
+        const resDiv = document.getElementById('resultado');
+        resDiv.innerHTML = "<p style='text-align:center'>Processando Diagnóstico...</p>";
+
+        // Busca Falhas Oficiais e Relatos ao mesmo tempo
+        const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.ilike.%${buscaRaw}%,descricao.ilike.%${buscaRaw}%`);
+        const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').or(`dtc_vinculado.ilike.%${buscaRaw}%,relato.ilike.%${buscaRaw}%`);
+
+        resDiv.innerHTML = "";
+
+        if ((!falhas || falhas.length === 0) && (!relatos || relatos.length === 0)) {
+            resDiv.innerHTML = "<div class='card'>Nenhum diagnóstico encontrado.</div>";
+            return;
         }
 
-        async function enviarRelato(codigo, marca) {
-            const texto = prompt("Como você resolveu esse problema na prática? (Dica de Ouro)");
-            if (texto) {
-                const { error } = await supabaseClient.from('relatos_usuarios').insert([
-                    { dtc_vinculado: codigo, marca: marca, relato: texto, usuario_nome: 'Leandro Euro', status_info: 'vip' }
-                ]);
-                if (!error) {
-                    alert("Sua experiência foi salva como VIP! Vou processar agora.");
-                    buscarGeral();
-                }
+        falhas?.forEach(item => {
+            const marca = item.marca.toLowerCase();
+            const logo = marca === 'scania' ? 'https://www.scania.com/content/dam/scanianoe/market/master/experience-scania/scania-symbol.png' : 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Volvo_Logo.svg/1200px-Volvo_Logo.svg.png';
+            const relatosDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+
+            resDiv.innerHTML += `
+            <div class='card'>
+                <div class="card-header">
+                    <span class="badge ${marca === 'scania' ? 'badge-scania' : 'badge-volvo'}">${item.marca} | ${item.modulo}</span>
+                    <img src="${logo}" class="brand-logo">
+                </div>
+                <h2 style="color:var(--neon)">DTC ${item.codigo}</h2>
+                <p><b>Análise Técnica:</b> ${item.descricao}</p>
+                <p style="color:#00ff00"><b>Solução Padrão:</b> ${item.solucao_vip || 'Consulte o Master'}</p>
+                
+                <div id="lista-relatos-${item.codigo}">
+                    ${relatosDesteDTC.map(r => `
+                        <div class="relato-box ${r.status_info === 'vip' ? 'relato-vip' : 'relato-publico'}">
+                            <b><i class="fas fa-wrench"></i> Caso Real (${r.usuario_nome}):</b><br>
+                            ${r.relato}
+                            <br><small style="opacity:0.6">${r.status_info.toUpperCase()}</small>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
+                    <i class="fas fa-plus-circle"></i> ADICIONAR EXPERIÊNCIA DE CAMPO
+                </button>
+            </div>`;
+        });
+    }
+
+    async function enviarRelato(codigo, marca) {
+        const texto = prompt("Como você resolveu esse problema na prática? (Dica de Ouro)");
+        if (texto) {
+            const { error } = await supabaseClient.from('relatos_usuarios').insert([
+                { dtc_vinculado: codigo, marca: marca, relato: texto, usuario_nome: 'Leandro Euro', status_info: 'vip' }
+            ]);
+            if (!error) {
+                alert("Sua experiência foi salva como VIP!");
+                buscarGeral();
             }
         }
-
-        async function initDashboard() {
-    try {
-        // Busca o total de Scania independente de qualquer outro filtro
-        const { count: s } = await supabaseClient.from('falhas_dtc')
-            .select('*', { count: 'exact', head: true })
-            .ilike('marca', 'Scania');
-            
-        // Busca o total de Volvo
-        const { count: v } = await supabaseClient.from('falhas_dtc')
-            .select('*', { count: 'exact', head: true })
-            .ilike('marca', 'Volvo');
-
-        // Busca o total de Programações (Progs)
-        const { count: p } = await supabaseClient.from('parametros_programacao')
-            .select('*', { count: 'exact', head: true });
-        
-        // Atualiza o painel na tela
-        document.getElementById('countScania').innerText = s || 0;
-        document.getElementById('countVolvo').innerText = v || 0;
-        document.getElementById('countParams').innerText = p || 0;
-    } catch (error) {
-        console.error("Erro no painel:", error);
     }
-}
 
-        window.onload = initDashboard;
-    </script>
-</body>
-</html>
+    // Inicializa ao carregar a página
+    window.onload = initDashboard;
+</script>
