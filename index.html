@@ -96,7 +96,8 @@
             const resDiv = document.getElementById('resultado');
             resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Analisando DTC Exato...</p>";
 
-            const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.eq.${buscaRaw},descricao.ilike.%${buscaRaw}%`);
+            // Procure esta linha e mude para:
+const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.eq.${buscaRaw},descricao.ilike.%${buscaRaw}%`);
             const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').eq('dtc_vinculado', buscaRaw).neq('status_info', 'pendente');
 
             resDiv.innerHTML = "";
