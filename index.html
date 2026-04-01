@@ -89,85 +89,24 @@ const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
             }
         }
 
-        // 3. Busca Exata e Inteligente
         async function buscarGeral() {
-            let buscaRaw = document.getElementById('dtcInput').value.trim();
-            if(!buscaRaw) return;
-            const resDiv = document.getElementById('resultado');
-            resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Analisando DTC Exato...</p>";
+    let buscaRaw = document.getElementById('dtcInput').value.trim();
+    const resDiv = document.getElementById('resultado');
+    resDiv.innerHTML = "Buscando...";
 
-            // Procure esta linha e mude para:
-const { data: falhas } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.eq.${buscaRaw},descricao.ilike.%${buscaRaw}%`);
-            const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').eq('dtc_vinculado', buscaRaw).neq('status_info', 'pendente');
+    // Teste simples: busca tudo se o campo estiver vazio para ver se o banco responde
+    const { data: falhas, error } = await supabaseClient
+        .from('falhas_dtc')
+        .select('*')
+        .limit(10); // Puxa as 10 primeiras para teste
 
-            resDiv.innerHTML = "";
-            if (!falhas?.length && !relatos?.length) {
-                resDiv.innerHTML = "<div class='card'>Nenhum registro encontrado para '" + buscaRaw + "'.</div>";
-                return;
-            }
+    if (error) {
+        resDiv.innerHTML = "Erro na conexão: " + error.message;
+        return;
+    }
 
-            falhas.forEach(item => {
-            const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
-            const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
-            
-            resDiv.innerHTML += `
-            <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0;">
-                <div style="background: #222; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
-                    <span style="color: ${ehECA ? '#ff4444' : 'var(--neon)'}; font-weight: bold; letter-spacing: 1px;">
-                        ${item.marca} | MÓDULO: ${item.modulo}
-                    </span>
-                    <button class="btn-pdf" onclick="gerarPDF('${item.codigo}', '${item.descricao}', '${item.solucao_vip}')">
-                        <i class="fas fa-file-pdf"></i> GERAR LAUDO
-                    </button>
-                </div>
-
-                <div style="padding: 20px;">
-                    <h2 style="margin: 0 0 15px 0; color: #fff;">CÓDIGO DTC: ${item.codigo}</h2>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
-                        
-                        <div>
-                            <b style="color: var(--neon); text-transform: uppercase; font-size: 11px;">1. Descrição da Falha</b>
-                            <p style="margin: 5px 0; color: #ccc;">${item.descricao}</p>
-                        </div>
-
-                        <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 5px;">
-                            <b style="color: #ffaa00; text-transform: uppercase; font-size: 11px;">2. Causas Prováveis</b>
-                            <p style="margin: 5px 0; color: #eee; font-style: italic;">
-                                ${item.causas_provaveis || "Verificar chicote, conectores e alimentação do módulo."}
-                            </p>
-                        </div>
-
-                        <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 10px; border-radius: 5px; background: ${ehECA ? 'rgba(255,0,0,0.05)' : 'rgba(0,212,255,0.05)'}">
-                            <b style="color: ${ehECA ? 'red' : '#00ff00'}; text-transform: uppercase; font-size: 11px;">3. Ação Recomendada</b>
-                            <p style="margin: 5px 0; color: #fff; font-weight: 500;">
-                                ${item.solucao_vip || "Realizar teste de diagnóstico via SDP3 ou Multímetro."}
-                            </p>
-                        </div>
-                    </div>
-
-                    ${ehECA ? `
-                    <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #444; font-size: 12px; color: #888;">
-                        <i class="fas fa-info-circle"></i> <b>Nota Técnica:</b> Unidade ECA requer calibração após manutenção física.
-                    </div>` : ''}
-
-                    ${rDesteDTC.length > 0 ? `
-                        <div style="margin-top: 20px;">
-                            <span style="font-size: 10px; color: #555; font-weight: bold;">RELATOS DE CAMPO (VIP)</span>
-                            ${rDesteDTC.map(r => `
-                                <div class="relato-box" style="border-left-color: ${r.status_info === 'vip' ? '#ffaa00' : '#00ff00'}">
-                                    ${r.relato}
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-                </div>
-                
-                <button class="btn-relatar" style="border-radius: 0 0 12px 12px;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                    <i class="fas fa-edit"></i> ADICIONAR EXPERIÊNCIA TÉCNICA
-                </button>
-            </div>`;
-        });
+    resDiv.innerHTML = "Sucesso! Encontrei " + falhas.length + " falhas.";
+}
         // 4. Voz e Relatos
         function iniciarVoz() {
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
