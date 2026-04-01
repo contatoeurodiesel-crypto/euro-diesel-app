@@ -88,25 +88,45 @@
                 return;
             }
 
-            // Dentro do loop falhas.forEach no seu index.html:
-resDiv.innerHTML += `
-    <div class='card' style="border-left: 4px solid var(--danger)">
-        <div style="display:flex; justify-content:space-between">
-            <span class="badge" style="background:red">SISTEMA ECA</span>
-            <button class="btn-pdf" onclick="gerarPDF('${item.codigo}', '${item.descricao}', '${item.solucao_vip}')">LAUDO TÉCNICO</button>
-        </div>
-        <h2 style="color:var(--danger)">CÓDIGO ${item.codigo}</h2>
-        <p><b>Diagnóstico:</b> ${item.descricao}</p>
-        
-        <div style="background:rgba(255,0,0,0.1); padding:10px; border-radius:8px; margin-top:10px; border: 1px solid red">
-            <b style="color:#ff4444"><i class="fas fa-microchip"></i> AÇÃO RECOMENDADA:</b><br>
-            ${item.solucao_vip}
-        </div>
+            falhas.forEach(item => {
+            const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+            
+            // LOGICA MESTRE: Se o módulo for ECA, usa o visual de PERIGO, senão usa o NEON padrão
+            const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
+            const corBorda = ehECA ? 'var(--danger)' : 'var(--neon)';
+            const corTexto = ehECA ? '#ff4444' : 'var(--neon)';
 
-        <div style="margin-top:10px; font-size:12px; color:#aaa">
-            <i class="fas fa-vial"></i> <b>DICA EURO DIESEL:</b> Se for erro de CAN, meça a resistência nos pinos do módulo (60 Ohms com rede casada).
-        </div>
-    </div>`;
+            resDiv.innerHTML += `
+            <div class='card' style="border-left: 4px solid ${corBorda}">
+                <div style="display:flex; justify-content:space-between">
+                    <span class="badge" style="background:${ehECA ? 'red' : '#333'}">${item.marca} | ${item.modulo}</span>
+                    <button class="btn-pdf" onclick="gerarPDF('${item.codigo}', '${item.descricao}', '${item.solucao_vip}')">
+                        <i class="fas fa-file-pdf"></i> LAUDO TÉCNICO
+                    </button>
+                </div>
+                
+                <h2 style="color:${corTexto}; margin:10px 0">CÓDIGO ${item.codigo}</h2>
+                <p><b>Diagnóstico:</b> ${item.descricao}</p>
+                
+                <div style="background:${ehECA ? 'rgba(255,0,0,0.1)' : 'rgba(0,212,255,0.1)'}; padding:15px; border-radius:8px; margin-top:10px; border: 1px solid ${corBorda}">
+                    <b style="color:${corTexto}"><i class="fas fa-microchip"></i> AÇÃO RECOMENDADA:</b><br>
+                    ${item.solucao_vip || 'Análise técnica requerida.'}
+                </div>
+
+                ${ehECA ? `
+                <div style="margin-top:10px; font-size:12px; color:#aaa">
+                    <i class="fas fa-vial"></i> <b>DICA EURO DIESEL:</b> Se for erro de CAN, meça a resistência nos pinos do módulo (60 Ohms com rede casada).
+                </div>` : ''}
+
+                ${rDesteDTC.map(r => `
+                    <div class="relato-box" style="border-left:3px solid ${r.status_info === 'vip' ? '#ffaa00' : '#00ff00'}">
+                        <b style="color:${r.status_info === 'vip' ? '#ffaa00' : '#00ff00'}">CASO REAL:</b> ${r.relato}
+                    </div>
+                `).join('')}
+                
+                <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">ADICIONAR EXPERIÊNCIA</button>
+            </div>`;
+        });
 
         // 4. Voz e Relatos
         function iniciarVoz() {
