@@ -166,14 +166,17 @@
                     </div>`;
             }
 
+            // Limpeza de texto para evitar erro no onclick do PDF
+            const descLimpa = item.descricao.replace(/'/g, "\\'").replace(/\n/g, " ");
+            const solLimpa = item.solucao_vip.replace(/'/g, "\\'").replace(/\n/g, " ");
+
             resDiv.innerHTML += `
             <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden; margin-bottom: 25px;">
-                
                 <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
                     <span style="color: #888; font-size: 11px; font-weight: bold; letter-spacing: 1px;">
                         <i class="fas fa-microchip"></i> SISTEMA DE DIAGNÓSTICO AVANÇADO
                     </span>
-                    <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/'/g, "\\'")}', '${item.solucao_vip.replace(/'/g, "\\'")}')">
+                    <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${descLimpa}', '${solLimpa}')">
                         <i class="fas fa-file-pdf"></i> GERAR RELATÓRIO
                     </button>
                 </div>
@@ -184,11 +187,9 @@
                             <h2 style="margin: 0; font-size: 28px; color: #fff;">${item.codigo}</h2>
                             <span style="color: var(--neon); font-size: 12px; font-weight: bold;">MÓDULO: ${item.modulo} | ${item.marca.toUpperCase()}</span>
                         </div>
-                        <div style="text-align: right;">
-                            <span class="badge" style="background: ${ehECA ? 'rgba(255,68,68,0.2)' : 'rgba(0,212,255,0.2)'}; color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; border: 1px solid; padding: 5px 10px;">
-                                ${ehECA ? 'SISTEMA CRÍTICO' : 'VERIFICAÇÃO PADRÃO'}
-                            </span>
-                        </div>
+                        <span class="badge" style="background: ${ehECA ? 'rgba(255,68,68,0.2)' : 'rgba(0,212,255,0.2)'}; color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; border: 1px solid; padding: 5px 10px;">
+                            ${ehECA ? 'SISTEMA CRÍTICO' : 'VERIFICAÇÃO PADRÃO'}
+                        </span>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
