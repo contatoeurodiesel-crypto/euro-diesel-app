@@ -143,7 +143,7 @@
                     <span style="color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; font-weight: bold; letter-spacing: 1px; font-size: 12px;">
                         <i class="fas fa-truck-moving"></i> ${item.marca.toUpperCase()} | MÓDULO: ${item.modulo}
                     </span>
-                    <button class="btn-pdf" onclick="alert('Gerando Laudo de Diagnóstico...')">LAUDO TÉCNICO</button>
+                    <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/'/g, "\\'")}', '${item.solucao_vip.replace(/'/g, "\\'")}')">LAUDO TÉCNICO</button>
                 </div>
 
                 <div style="padding: 20px;">
