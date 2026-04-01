@@ -133,64 +133,79 @@
     // ... (Mantenha o início da função buscarGeral igual até a parte do forEach)
 
         falhas.forEach(item => {
-            const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
-            const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+    const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
+    const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
 
-            resDiv.innerHTML += `
-            <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden;">
-                <div style="background: #222; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
-                    <span style="color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; font-weight: bold; letter-spacing: 1px; font-size: 12px;">
-                        <i class="fas fa-truck-moving"></i> ${item.marca.toUpperCase()} | MÓDULO: ${item.modulo}
+    resDiv.innerHTML += `
+    <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden; margin-bottom: 25px;">
+        
+        <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+            <span style="color: #888; font-size: 11px; font-weight: bold; letter-spacing: 1px;">
+                <i class="fas fa-microchip"></i> SISTEMA DE DIAGNÓSTICO AVANÇADO
+            </span>
+            <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/'/g, "\\'")}', '${item.solucao_vip.replace(/'/g, "\\'")}')">
+                <i class="fas fa-file-pdf"></i> GERAR RELATÓRIO
+            </button>
+        </div>
+
+        <div style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <h2 style="margin: 0; font-size: 28px; color: #fff;">${item.codigo}</h2>
+                    <span style="color: var(--neon); font-size: 12px; font-weight: bold;">MÓDULO: ${item.modulo} | ${item.marca.toUpperCase()}</span>
+                </div>
+                <div style="text-align: right;">
+                    <span class="badge" style="background: ${ehECA ? 'rgba(255,68,68,0.2)' : 'rgba(0,212,255,0.2)'}; color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; border: 1px solid; padding: 5px 10px;">
+                        ${ehECA ? 'SISTEMA CRÍTICO' : 'VERIFICAÇÃO PADRÃO'}
                     </span>
-                    <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/'/g, "\\'")}', '${item.solucao_vip.replace(/'/g, "\\'")}')">LAUDO TÉCNICO</button>
                 </div>
+            </div>
 
-                <div style="padding: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                        <h2 style="margin: 0; font-size: 24px; color: #fff;">DTC: ${item.codigo}</h2>
-                        <span class="badge" style="background: ${ehECA ? 'rgba(255,0,0,0.1)' : 'rgba(0,212,255,0.1)'}; color: ${ehECA ? 'red' : 'var(--neon)'}; border: 1px solid;">
-                            ${item.modulo}
-                        </span>
-                    </div>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <b style="color: var(--neon); text-transform: uppercase; font-size: 10px; letter-spacing: 1px;">1. Diagnóstico do Software</b>
-                        <p style="margin: 5px 0; color: #ccc; line-height: 1.4;">${item.descricao}</p>
-                    </div>
-
-                    <div style="background: rgba(255,170,0,0.05); padding: 12px; border-radius: 6px; border-left: 2px solid #ffaa00;">
-                        <b style="color: #ffaa00; text-transform: uppercase; font-size: 10px;">2. Onde olhar primeiro (Checklist)</b>
-                        <p style="margin: 5px 0; color: #eee; font-style: italic;">${item.causas_provaveis || 'Verificar alimentação 24V e integridade da rede CAN.'}</p>
-                    </div>
-
-                    <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 12px; border-radius: 6px; background: ${ehECA ? 'rgba(255,0,0,0.08)' : 'rgba(0,212,255,0.08)'}">
-                        <b style="color: ${ehECA ? '#ff4444' : '#00ff00'}; text-transform: uppercase; font-size: 10px;">3. Solução VIP Master Intelligence</b>
-                        <p style="margin: 5px 0; color: #fff; font-weight: 600; line-height: 1.4;">${item.solucao_vip}</p>
-                        
-                        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.2); font-size: 11px; color: #00ff00;">
-                            <i class="fas fa-lightbulb"></i> <b>INSIGHT DA IA:</b> 
-                            ${item.modulo === 'EMS' ? 'Cuidado com óleo no chicote! Se o conector estiver úmido, limpe com álcool isopropílico antes de trocar o sensor.' : ''}
-                            ${item.modulo === 'GMS' ? 'Dica: Falhas de engate em Scania geralmente são causadas por baixa pressão de ar ou sensores de posição sujos.' : ''}
-                            ${item.modulo === 'ACM' ? 'Atenção: Sempre teste o Arla com refratômetro. Se estiver acima de 33%, o sistema vai travar o torque.' : ''}
-                            ${!['EMS','GMS','ACM'].includes(item.modulo) ? 'Verifique se a rede CAN está com 60 Ohms de resistência com as baterias desligadas.' : ''}
-                        </div>
-                    </div>
-                </div>
-
-                    ${rDesteDTC.length > 0 ? `
-                        <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
-                            <span style="font-size: 11px; color: #888; font-weight: bold; text-transform: uppercase;"><i class="fas fa-tools"></i> Experiência de Campo</span>
-                            ${rDesteDTC.map(r => `<div class="relato-box">${r.relato}</div>`).join('')}
-                        </div>
-                    ` : ''}
-                </div>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
                 
-                <button class="btn-relatar" style="border-radius: 0; border: none; background: #1a1a1a; padding: 12px;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                    <i class="fas fa-plus-circle"></i> ADICIONAR EXPERIÊNCIA TÉCNICA
-                </button>
-            </div>`;
-        });
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
+                    <b style="color: var(--neon); display: block; margin-bottom: 5px; font-size: 11px;"><i class="fas fa-eye"></i> 1. NO SOFTWARE (SDP3/TECH TOOL)</b>
+                    <p style="margin: 0; font-size: 14px; color: #ccc;">${item.descricao}</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="border: 1px solid #333; padding: 10px; border-radius: 6px;">
+                        <b style="color: #ffaa00; font-size: 10px;">TIPO 1: HARDWARE</b>
+                        <p style="margin: 5px 0 0; font-size: 12px; color: #888;">Verificar trilhas da placa e curto-circuito interno.</p>
+                    </div>
+                    <div style="border: 1px solid #333; padding: 10px; border-radius: 6px;">
+                        <b style="color: #ffaa00; font-size: 10px;">TIPO 2: CONECTIVIDADE</b>
+                        <p style="margin: 5px 0 0; font-size: 12px; color: #888;">Verificar oxidação nos pinos e chicote intermitente.</p>
+                    </div>
+                </div>
+
+                <div style="background: rgba(0,255,0,0.05); border: 1px solid rgba(0,255,0,0.2); padding: 15px; border-radius: 8px;">
+                    <b style="color: #00ff00; display: block; margin-bottom: 5px; font-size: 11px;"><i class="fas fa-bolt"></i> 2. TESTE DE GRANDEZA ELÉTRICA</b>
+                    <div style="font-family: monospace; font-size: 13px; color: #fff;">
+                        Sinal esperado: <span style="color: #00ff00;">0.15V ~ 3.70V</span><br>
+                        Resistência CAN: <span style="color: #00ff00;">60 Ohms (nominal)</span>
+                    </div>
+                </div>
+
+                <div style="background: var(--neon); color: #000; padding: 15px; border-radius: 8px; font-weight: bold;">
+                    <i class="fas fa-tools"></i> 3. PROCEDIMENTO MASTER EURO DIESEL
+                    <p style="margin: 5px 0 0; font-size: 15px;">${item.solucao_vip}</p>
+                </div>
+            </div>
+
+            ${rDesteDTC.length > 0 ? `
+                <div style="margin-top: 20px; border-top: 1px dashed #444; padding-top: 15px;">
+                    <span style="font-size: 11px; color: #888; font-weight: bold;"><i class="fas fa-history"></i> HISTÓRICO DE SUCESSO EM CAMPO</span>
+                    ${rDesteDTC.map(r => `<div class="relato-box" style="background: #111; border-color: #333;">${r.relato}</div>`).join('')}
+                </div>
+            ` : ''}
+        </div>
+
+        <button class="btn-relatar" style="background: #222; border: none; padding: 15px; color: var(--neon); font-weight: bold; cursor: pointer; width: 100%;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
+            <i class="fas fa-plus"></i> ALIMENTAR INTELIGÊNCIA COM NOVO DIAGNÓSTICO
+        </button>
+    </div>`;
+});
     } // Fim da função buscarGeral
 
         function iniciarVoz() {
