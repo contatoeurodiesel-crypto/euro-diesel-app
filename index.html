@@ -69,13 +69,24 @@
         // 2. Dashboard
         async function initDashboard() {
             try {
-                const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
-                const { count: v } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
-                const { count: p } = await supabaseClient.from('parametros_programacao').select('*', { count: 'exact', head: true });
-                document.getElementById('countScania').innerText = s || 0;
-                document.getElementById('countVolvo').innerText = v || 0;
-                document.getElementById('countParams').innerText = p || 0;
-            } catch (e) { console.error(e); }
+                // Adicionamos um pequeno delay para garantir que a conexão Supabase esteja ativa
+                const { count: s, error: errS } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
+                const { count: v, error: errV } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
+                const { count: p, error: errP } = await supabaseClient.from('parametros_programacao').select('*', { count: 'exact', head: true });
+                
+                if(errS || errV || errP) {
+                    console.warn("Aguardando resposta do banco...");
+                    // Tenta novamente após 2 segundos se falhar
+                    setTimeout(initDashboard, 2000);
+                    return;
+                }
+
+                document.getElementById('countScania').innerText = s !== null ? s : 0;
+                document.getElementById('countVolvo').innerText = v !== null ? v : 0;
+                document.getElementById('countParams').innerText = p !== null ? p : 0;
+            } catch (e) { 
+                console.error("Erro no Dashboard:", e); 
+            }
         }
 
         // 3. Busca Exata e Inteligente
