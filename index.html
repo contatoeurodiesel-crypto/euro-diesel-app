@@ -65,20 +65,16 @@
 
     // BANCO DE DADOS DE INTELIGÊNCIA (IGUAL AO SCANNA DTC)
     const inteligenciaDTC = {
-        "50000": {
-            "modulo": "GMS OPC5 ECA",
-            "cabecalho": "Unidade ECA",
-            "acao": [
-                "Desconecte os conectores de chicote ao ECA e verifique se os pinos estão gastos.",
-                "Se os pinos estiverem gastos, substitua o chicote de cabos ao ECA e à caixa de mudanças.",
-                "Verifique a tensão de alimentação ao ECA.",
-                "Substitua o ECA se a falha persistir."
-            ],
-            "causa": "Mensagem aguardada da unidade ECA desapareceu ou está faltando. Pode ser circuito aberto no chicote CAN ou na alimentação.",
-            "deteccao": "Prazo esgotado na mensagem CAN (faltou por mais de 5 vezes).",
-            "reacao": "O veículo não arrancará quando a posição de ponto morto for engatada na frenagem."
-        }
-    };
+    "50000": { ... },
+    "12345": {
+        "modulo": "EMS",
+        "acao": ["Verificar chicote", "Testar sensor"],
+        "causa": "Curto circuito",
+        "deteccao": "Sinal alto",
+        "reacao": "Potência reduzida"
+    },
+    // Adicione as próximas aqui...
+};
 
     async function buscarGeral() {
     let buscaRaw = document.getElementById('dtcInput').value.trim().toUpperCase();
