@@ -79,20 +79,31 @@
     if(!buscaRaw) return;
     
     const resDiv = document.getElementById('resultado');
-    resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Localizando Diagnóstico Master...</p>";
+    resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Analisando Protocolo Master...</p>";
 
-    // INTELIGÊNCIA SCANIA: Se digitar 5018, o sistema busca 50180 automaticamente
-    if (buscaRaw.startsWith('50') && buscaRaw.length === 4) {
-        buscaRaw = buscaRaw + '0';
-    }
-
-    // 1. Busca Falha Oficial (Obrigatória e Exata)
-    const { data: falhas, error: errF } = await supabaseClient
+    // --- ESTRATÉGIA DE BUSCA EXPERT ---
+    
+    // 1. Tenta encontrar EXATAMENTE o que o técnico digitou
+    let { data: falhas, error: errF } = await supabaseClient
         .from('falhas_dtc')
         .select('*')
-        .eq('codigo', buscaRaw); // Busca EXATA conforme solicitado
+        .eq('codigo', buscaRaw);
 
-    // 2. Busca Relatos de Campo vinculados a este código
+    // 2. Se não achou e o código tem 4 dígitos (ex: 5018), tenta o padrão Scania (50180)
+    if ((!falhas || falhas.length === 0) && buscaRaw.startsWith('50') && buscaRaw.length === 4) {
+        const codigoSugestao = buscaRaw + '0';
+        const { data: falhasScania } = await supabaseClient
+            .from('falhas_dtc')
+            .select('*')
+            .eq('codigo', codigoSugestao);
+
+        if (falhasScania && falhasScania.length > 0) {
+            falhas = falhasScania;
+            buscaRaw = codigoSugestao; // Atualiza para o laudo sair correto
+        }
+    }
+
+    // 3. Busca Relatos vinculados ao código final definido
     const { data: relatos } = await supabaseClient
         .from('relatos_usuarios')
         .select('*')
@@ -101,65 +112,61 @@
 
     resDiv.innerHTML = "";
 
-    // Se não encontrar nada no banco oficial
+    // Validação de erro ou busca vazia
     if (errF || (!falhas?.length && !relatos?.length)) {
         resDiv.innerHTML = `
             <div class='card' style="border-left: 4px solid var(--danger);">
-                <h3 style="color: var(--danger);">CÓDIGO ${buscaRaw} NÃO ENCONTRADO</h3>
-                <p>Este código não consta na base oficial. Verifique se digitou corretamente ou adicione um relato abaixo.</p>
-                <button class="btn-relatar" onclick="enviarRelato('${buscaRaw}', 'Geral')">ADICIONAR ESTA FALHA AGORA</button>
+                <h3 style="color: var(--danger);">CÓDIGO ${buscaRaw} NÃO LOCALIZADO</h3>
+                <p>O protocolo informado não consta na Master Intelligence. Verifique o módulo ou adicione um relato.</p>
+                <button class="btn-relatar" onclick="enviarRelato('${buscaRaw}', 'Geral')">CADASTRAR FALHA AGORA</button>
             </div>`;
         return;
     }
 
-    // 3. Renderiza o Card de Diagnóstico estilo SDP3
+    // 4. Renderização com distinção de Marca e Módulo
     falhas.forEach(item => {
+        // Estilo dinâmico: Vermelho para Scania/ECA, Azul/Neon para outros
         const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
         const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
 
         resDiv.innerHTML += `
-        <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0;">
+        <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden;">
             <div style="background: #222; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
-                <span style="color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; font-weight: bold; letter-spacing: 1px;">
-                    ${item.marca} | MÓDULO: ${item.modulo}
+                <span style="color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; font-weight: bold; letter-spacing: 1px; font-size: 12px;">
+                    <i class="fas fa-truck-moving"></i> ${item.marca.toUpperCase()} | MÓDULO: ${item.modulo}
                 </span>
-                <button class="btn-pdf" onclick="alert('Gerando Laudo...')">LAUDO TÉCNICO</button>
+                <button class="btn-pdf" onclick="alert('Gerando Laudo de Diagnóstico...')">LAUDO TÉCNICO</button>
             </div>
 
             <div style="padding: 20px;">
-                <h2 style="margin: 0 0 15px 0;">CÓDIGO DTC: ${item.codigo}</h2>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                    <h2 style="margin: 0; font-size: 24px; color: #fff;">DTC: ${item.codigo}</h2>
+                    <span class="badge" style="background: ${ehECA ? 'rgba(255,0,0,0.1)' : 'rgba(0,212,255,0.1)'}; color: ${ehECA ? 'red' : 'var(--neon)'}; border: 1px solid;">
+                        ${item.modulo}
+                    </span>
+                </div>
                 
                 <div style="display: flex; flex-direction: column; gap: 15px;">
                     <div>
-                        <b style="color: var(--neon); text-transform: uppercase; font-size: 11px;">1. Descrição da Falha (SDP3)</b>
-                        <p style="margin: 5px 0; color: #ccc;">${item.descricao}</p>
+                        <b style="color: var(--neon); text-transform: uppercase; font-size: 10px; letter-spacing: 1px;">1. Descrição Software</b>
+                        <p style="margin: 5px 0; color: #ccc; line-height: 1.4;">${item.descricao}</p>
                     </div>
 
-                    <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 5px;">
-                        <b style="color: #ffaa00; text-transform: uppercase; font-size: 11px;">2. Causas Prováveis</b>
-                        <p style="margin: 5px 0; color: #eee; font-style: italic;">${item.causas_provaveis || 'Verificar alimentação e rede CAN.'}</p>
+                    <div style="background: rgba(255,170,0,0.05); padding: 12px; border-radius: 6px; border-left: 2px solid #ffaa00;">
+                        <b style="color: #ffaa00; text-transform: uppercase; font-size: 10px;">2. Causas Prováveis (Checklist)</b>
+                        <p style="margin: 5px 0; color: #eee; font-style: italic;">${item.causas_provaveis || 'Verificar alimentação, chicote e conectores da rede CAN.'}</p>
                     </div>
 
-                    <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 10px; border-radius: 5px; background: ${ehECA ? 'rgba(255,0,0,0.05)' : 'rgba(0,212,255,0.05)'}">
-                        <b style="color: ${ehECA ? 'red' : '#00ff00'}; text-transform: uppercase; font-size: 11px;">3. Solução VIP Master</b>
-                        <p style="margin: 5px 0; color: #fff; font-weight: 500;">${item.solucao_vip}</p>
+                    <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 12px; border-radius: 6px; background: ${ehECA ? 'rgba(255,0,0,0.05)' : 'rgba(0,212,255,0.05)'}">
+                        <b style="color: ${ehECA ? '#ff4444' : '#00ff00'}; text-transform: uppercase; font-size: 10px;">3. Solução VIP Master Intelligence</b>
+                        <p style="margin: 5px 0; color: #fff; font-weight: 500; line-height: 1.4;">${item.solucao_vip}</p>
                     </div>
                 </div>
 
                 ${rDesteDTC.length > 0 ? `
-                    <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px;">
-                        <span style="font-size: 10px; color: #888; font-weight: bold;">RELATOS DE CAMPO</span>
-                        ${rDesteDTC.map(r => `<div class="relato-box">${r.relato}</div>`).join('')}
-                    </div>
-                ` : ''}
-            </div>
-            
-            <button class="btn-relatar" style="border-radius: 0 0 12px 12px;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                ADICIONAR EXPERIÊNCIA TÉCNICA
-            </button>
-        </div>`;
-    });
-}
+                    <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
+                        <span style="font-size: 11px; color: #888; font-weight: bold; text-transform: uppercase;"><i class="fas fa-tools"></i> Experiência de Campo</span>
+                        ${rDesteDTC.map(r => `<div class="relato-box"
 
         function iniciarVoz() {
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
