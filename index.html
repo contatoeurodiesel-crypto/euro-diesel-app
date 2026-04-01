@@ -63,96 +63,103 @@
     const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s"; 
     const supabaseClient = supabase.createClient(_URL, _KEY);
 
-    // BANCO DE DADOS DE INTELIGÊNCIA (IGUAL AO SCANNA DTC)
+    // BANCO DE DADOS DE INTELIGÊNCIA MESTRE
     const inteligenciaDTC = {
-    "50000": { ... },
-    "12345": {
-        "modulo": "EMS",
-        "acao": ["Verificar chicote", "Testar sensor"],
-        "causa": "Curto circuito",
-        "deteccao": "Sinal alto",
-        "reacao": "Potência reduzida"
-    },
-    // Adicione as próximas aqui...
-};
+        "50000": {
+            "modulo": "GMS OPC5 ECA",
+            "acao": [
+                "Desconecte os conectores de chicote ao ECA e verifique se os pinos estão gastos.",
+                "Se os pinos estiverem gastos, substitua o chicote de cabos ao ECA e à caixa de mudanças.",
+                "Verifique a tensão de alimentação ao ECA.",
+                "Substitua o ECA se a falha persistir."
+            ],
+            "causa": "Mensagem aguardada da unidade ECA desapareceu ou está faltando. Pode ser circuito aberto no chicote CAN ou na alimentação.",
+            "deteccao": "Prazo esgotado na mensagem CAN (faltou por mais de 5 vezes).",
+            "reacao": "O veículo não arrancará quando a posição de ponto morto for engatada na frenagem."
+        },
+        "12345": {
+            "modulo": "EMS",
+            "acao": ["Verificar chicote", "Testar continuidade do sensor de pressão"],
+            "causa": "Curto circuito ou falha de aterramento",
+            "deteccao": "Sinal acima do limite por mais de 2 segundos",
+            "reacao": "Veículo entra em modo de segurança (limp mode)"
+        }
+    };
 
     async function buscarGeral() {
-    let buscaRaw = document.getElementById('dtcInput').value.trim().toUpperCase();
-    if(!buscaRaw) return;
-    
-    const resDiv = document.getElementById('resultado');
-    resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Consultando Protocolos Euro Diesel...</p>";
-
-    // 1. Busca os dados básicos e os relatos
-    let { data: falhas, error: errF } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', buscaRaw);
-    const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').eq('dtc_vinculado', buscaRaw).neq('status_info', 'pendente');
-
-    resDiv.innerHTML = "";
-
-    if (errF || (!falhas?.length && !relatos?.length)) {
-        resDiv.innerHTML = `<div class='card' style="border-left: 4px solid var(--danger);"><h3 style="color:var(--danger)">CÓDIGO ${buscaRaw} NÃO LOCALIZADO NO PROTOCOLO</h3></div>`;
-        return;
-    }
-
-    falhas.forEach(item => {
-        // Pega a inteligência detalhada se existir, ou cria um objeto padrão
-        const infoTecnica = inteligenciaDTC[item.codigo];
+        let buscaRaw = document.getElementById('dtcInput').value.trim().toUpperCase();
+        if(!buscaRaw) return;
         
-        let htmlConteudoTecnico = '';
+        const resDiv = document.getElementById('resultado');
+        resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Acessando Protocolos Master Euro Diesel...</p>";
 
-        if (infoTecnica) {
-            // Se existe o detalhamento (como o do 50000), monta o layout Scania DTC
-            htmlConteudoTecnico = `
-                <div style="margin-top: 15px; border: 1px solid #444; border-radius: 8px; background: #1a1e22; overflow: hidden;">
-                    <div style="background: #2c3e50; padding: 10px; font-weight: bold; color: var(--neon); font-size: 11px;">
-                        <i class="fas fa-microchip"></i> ANÁLISE TÉCNICA AVANÇADA
-                    </div>
-                    <div style="padding: 15px; font-size: 13px; line-height: 1.6;">
-                        <b style="color:var(--neon)">AÇÃO RECOMENDADA:</b>
-                        <ul style="margin: 5px 0 15px 18px; color: #ccc;">
-                            ${infoTecnica.acao.map(a => `<li>${a}</li>`).join('')}
-                        </ul>
-                        <b style="color:var(--neon)">CAUSA PROVÁVEL:</b> <p style="margin: 5px 0 15px 0; color:#ccc;">${infoTecnica.causa}</p>
-                        <b style="color:var(--neon)">CONDIÇÃO DE DETECÇÃO:</b> <p style="margin: 5px 0 15px 0; color:#ccc;">${infoTecnica.deteccao}</p>
-                        <b style="color:var(--danger)">REAÇÃO DO SISTEMA:</b> <p style="margin: 5px 0 0 0; color:#ffaaaa;">${infoTecnica.reacao}</p>
-                    </div>
-                </div>`;
+        let { data: falhas, error: errF } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', buscaRaw);
+        
+        // Lógica de sugestão Scania (Dígito zero no final)
+        if ((!falhas || falhas.length === 0) && buscaRaw.startsWith('50') && buscaRaw.length === 4) {
+            const { data: fScania } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', buscaRaw + '0');
+            if (fScania?.length > 0) { falhas = fScania; buscaRaw = buscaRaw + '0'; }
         }
 
-        resDiv.innerHTML += `
-            <div class='card' style="border-left: 4px solid var(--neon); padding: 0; overflow: hidden; margin-bottom: 25px;">
-                <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: #888; font-size: 10px;">EURO DIESEL - MECATRÔNICA NACIONAL</span>
-                    <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/\n/g, ' ')}', '${item.solucao_vip.replace(/\n/g, ' ')}')">GERAR LAUDO</button>
-                </div>
+        const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').eq('dtc_vinculado', buscaRaw).neq('status_info', 'pendente');
 
-                <div style="padding: 20px;">
-                    <h2 style="margin:0; font-size: 28px;">${item.codigo}</h2>
-                    <span style="color: var(--neon); font-size: 12px; font-weight: bold;">SISTEMA: ${item.modulo} | MARCA: ${item.marca}</span>
-                    
-                    <p style="background:rgba(255,255,255,0.03); padding:12px; border-radius:6px; color:#ddd; border: 1px solid #333; margin-top:10px;">
-                        <b>DESCRIÇÃO:</b> ${item.descricao}
-                    </p>
-                    
-                    ${htmlConteudoTecnico} 
+        resDiv.innerHTML = "";
 
-                    <div style="margin-top:15px; background: linear-gradient(90deg, #00d4ff, #008fb3); color:#000; padding:15px; border-radius:8px; font-weight:bold; box-shadow: 0 4px 15px rgba(0,212,255,0.2);">
-                        <i class="fas fa-check-circle"></i> SOLUÇÃO MASTER: ${item.solucao_vip}
+        if (errF || (!falhas?.length && !relatos?.length)) {
+            resDiv.innerHTML = `<div class='card' style="border-left: 4px solid var(--danger);"><h3 style="color:var(--danger)">CÓDIGO ${buscaRaw} NÃO LOCALIZADO</h3></div>`;
+            return;
+        }
+
+        falhas.forEach(item => {
+            const infoTecnica = inteligenciaDTC[item.codigo];
+            let htmlConteudoTecnico = '';
+
+            if (infoTecnica) {
+                htmlConteudoTecnico = `
+                    <div style="margin-top: 15px; border: 1px solid #444; border-radius: 8px; background: #1a1e22; overflow: hidden;">
+                        <div style="background: #2c3e50; padding: 10px; font-weight: bold; color: var(--neon); font-size: 11px;">
+                            <i class="fas fa-microchip"></i> ANÁLISE TÉCNICA AVANÇADA
+                        </div>
+                        <div style="padding: 15px; font-size: 13px; line-height: 1.6;">
+                            <b style="color:var(--neon)">AÇÃO RECOMENDADA:</b>
+                            <ul style="margin: 5px 0 10px 18px; color: #ccc;">
+                                ${infoTecnica.acao.map(a => `<li>${a}</li>`).join('')}
+                            </ul>
+                            <b style="color:var(--neon)">CAUSA PROVÁVEL:</b> <p style="margin: 0 0 10px 0; color:#ccc;">${infoTecnica.causa}</p>
+                            <b style="color:var(--neon)">CONDIÇÃO DE DETECÇÃO:</b> <p style="margin: 0 0 10px 0; color:#ccc;">${infoTecnica.deteccao}</p>
+                            <b style="color:var(--danger)">REAÇÃO DO SISTEMA:</b> <p style="margin: 0; color:#ffaaaa;">${infoTecnica.reacao}</p>
+                        </div>
+                    </div>`;
+            }
+
+            resDiv.innerHTML += `
+                <div class='card' style="border-left: 4px solid var(--neon); padding: 0; overflow: hidden; margin-bottom: 25px;">
+                    <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #888; font-size: 10px;">EURO DIESEL - MECATRÔNICA NACIONAL</span>
+                        <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/\n/g, ' ')}', '${item.solucao_vip.replace(/\n/g, ' ')}')">GERAR LAUDO</button>
                     </div>
-
-                    ${relatos && relatos.filter(r => r.dtc_vinculado === item.codigo).length > 0 ? `
-                        <div style="margin-top:20px; border-top:1px dashed #444; padding-top:15px;">
-                            <span style="font-size:11px; color:var(--neon); font-weight:bold; text-transform:uppercase;">Experiências de Campo:</span>
-                            ${relatos.filter(r => r.dtc_vinculado === item.codigo).map(r => `<div class="relato-box">${r.relato}</div>`).join('')}
-                        </div>` : ''}
-                </div>
-
-                <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                    <i class="fas fa-plus-circle"></i> ADICIONAR CONHECIMENTO À ESTA FALHA
-                </button>
-            </div>`;
-    });
-} // FIM DA BUSCAR GERAL
+                    <div style="padding: 20px;">
+                        <h2 style="margin:0; font-size: 28px;">${item.codigo}</h2>
+                        <span style="color: var(--neon); font-size: 12px; font-weight: bold;">SISTEMA: ${item.modulo} | MARCA: ${item.marca}</span>
+                        <p style="background:rgba(255,255,255,0.03); padding:12px; border-radius:6px; color:#ddd; border: 1px solid #333; margin-top:10px;">
+                            <b>DESCRIÇÃO:</b> ${item.descricao}
+                        </p>
+                        ${htmlConteudoTecnico} 
+                        <div style="margin-top:15px; background: linear-gradient(90deg, #00d4ff, #008fb3); color:#000; padding:15px; border-radius:8px; font-weight:bold;">
+                            <i class="fas fa-check-circle"></i> SOLUÇÃO MASTER: ${item.solucao_vip}
+                        </div>
+                        ${relatos && relatos.filter(r => r.dtc_vinculado === item.codigo).length > 0 ? `
+                            <div style="margin-top:20px; border-top:1px dashed #444; padding-top:15px;">
+                                <span style="font-size:11px; color:var(--neon); font-weight:bold;">HISTÓRICO DE CAMPO:</span>
+                                ${relatos.filter(r => r.dtc_vinculado === item.codigo).map(r => `<div class="relato-box">${r.relato}</div>`).join('')}
+                            </div>` : ''}
+                    </div>
+                    <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
+                        <i class="fas fa-plus-circle"></i> ADICIONAR CONHECIMENTO
+                    </button>
+                </div>`;
+        });
+    }
 
     async function initDashboard() {
         try {
@@ -161,7 +168,7 @@
             document.getElementById('countScania').innerText = s || 0;
             document.getElementById('countVolvo').innerText = v || 0;
             document.getElementById('countParams').innerText = "OK";
-        } catch (e) { console.error("Erro no Dashboard", e); }
+        } catch (e) { console.error(e); }
     }
 
     function iniciarVoz() {
@@ -195,9 +202,9 @@
                 .footer { margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; text-align: center; font-size: 12px; }
             </style></head><body>
                 <div class="header"><div class="logo">EURO DIESEL MECATRÔNICA</div></div>
-                <div class="box"><b>VEÍCULO:</b> ${marca.toUpperCase()} | <b>MÓDULO:</b> ${modulo} | <b>CÓDIGO:</b> ${codigo}</div>
-                <h3>DIAGNÓSTICO TÉCNICO</h3><p>${desc}</p>
-                <h3>PROCEDIMENTO DE REPARO</h3><p>${solucao}</p>
+                <div class="box"><b>VEÍCULO:</b> \${marca.toUpperCase()} | <b>MÓDULO:</b> \${modulo} | <b>CÓDIGO:</b> \${codigo}</div>
+                <h3>DIAGNÓSTICO TÉCNICO</h3><p>\${desc}</p>
+                <h3>PROCEDIMENTO DE REPARO</h3><p>\${solucao}</p>
                 <div class="footer"><b>Responsável Técnico: Leandro - Euro Diesel</b></div>
                 <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
             </body></html>
