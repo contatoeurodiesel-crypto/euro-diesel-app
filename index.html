@@ -147,107 +147,85 @@
     // ... (Mantenha o início da função buscarGeral igual até a parte do forEach)
 
         falhas.forEach(item => {
-    const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
-    const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+            const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
+            const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
             const extra = inteligenciaDTC[item.codigo];
-        let htmlExtra = '';
-        if (extra) {
-            htmlExtra = `
-                <div style="margin-top: 15px; border: 1px solid var(--vip); padding: 15px; border-radius: 8px; background: rgba(255,170,0,0.05);">
-                    <b style="color: var(--vip); font-size: 11px;"><i class="fas fa-brain"></i> ROTEIRO MASTER EURO DIESEL</b>
-                    <p style="font-size:12px; color:#aaa; margin: 5px 0;">Tempo: ${extra.tempo_estimado_reparo} | Ferramentas: ${extra.ferramentas_necessarias.join(', ')}</p>
-                    <div style="margin-top:10px; font-size: 13px; color: #eee;">
-                        ${extra.passo_a_passo.map(p => `<div style="margin-bottom:5px;"><i class="fas fa-check-circle" style="color:#00ff00"></i> ${p}</div>`).join('')}
-                    </div>
-                    <div style="margin-top: 10px; color: var(--danger); font-size: 12px; font-weight: bold;">
-                        <i class="fas fa-exclamation-triangle"></i> ${extra.alerta_mestre}
-                    </div>
-                </div>`;
-        }
+            
+            let htmlExtra = '';
+            if (extra) {
+                htmlExtra = `
+                    <div style="margin-top: 15px; border: 1px solid var(--vip); padding: 15px; border-radius: 8px; background: rgba(255,170,0,0.05);">
+                        <b style="color: var(--vip); font-size: 11px;"><i class="fas fa-brain"></i> ROTEIRO MASTER EURO DIESEL</b>
+                        <p style="font-size:12px; color:#aaa; margin: 5px 0;">Tempo: ${extra.tempo_estimado_reparo} | Ferramentas: ${extra.ferramentas_necessarias.join(', ')}</p>
+                        <div style="margin-top:10px; font-size: 13px; color: #eee;">
+                            ${extra.passo_a_passo.map(p => `<div style="margin-bottom:5px;"><i class="fas fa-check-circle" style="color:#00ff00"></i> ${p}</div>`).join('')}
+                        </div>
+                        <div style="margin-top: 10px; color: var(--danger); font-size: 12px; font-weight: bold;">
+                            <i class="fas fa-exclamation-triangle"></i> ${extra.alerta_mestre}
+                        </div>
+                    </div>`;
+            }
 
-    resDiv.innerHTML += `
-    <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden; margin-bottom: 25px;">
-        
-        <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
-            <span style="color: #888; font-size: 11px; font-weight: bold; letter-spacing: 1px;">
-                <i class="fas fa-microchip"></i> SISTEMA DE DIAGNÓSTICO AVANÇADO
-            </span>
-            <div style="font-family: monospace; font-size: 13px; color: #fff;">
-                    Sinal esperado: <span style="color: #00ff00;">0.15V ~ 3.70V</span><br>
-                    Resistência CAN: <span style="color: #00ff00;">60 Ohms (nominal)</span>
-                </div>
-            </div>
-
-            ${htmlExtra} <div style="background: var(--neon); color: #000; padding: 15px; border-radius: 8px; font-weight: bold;">
-                <i class="fas fa-tools"></i> 3. PROCEDIMENTO MASTER EURO DIESEL
-                <p style="margin: 5px 0 0; font-size: 15px;">${item.solucao_vip}</p>
-            </div>
-            ```
-
-Fazendo assim, você mantém todo o seu estilo original e apenas ganha o quadro de "Roteiro Master" toda vez que pesquisar um código que você cadastrou no objeto `inteligenciaDTC`.
-            <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/'/g, "\\'")}', '${item.solucao_vip.replace(/'/g, "\\'")}')">
-                <i class="fas fa-file-pdf"></i> GERAR RELATÓRIO
-            </button>
-        </div>
-
-        <div style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                <div>
-                    <h2 style="margin: 0; font-size: 28px; color: #fff;">${item.codigo}</h2>
-                    <span style="color: var(--neon); font-size: 12px; font-weight: bold;">MÓDULO: ${item.modulo} | ${item.marca.toUpperCase()}</span>
-                </div>
-                <div style="text-align: right;">
-                    <span class="badge" style="background: ${ehECA ? 'rgba(255,68,68,0.2)' : 'rgba(0,212,255,0.2)'}; color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; border: 1px solid; padding: 5px 10px;">
-                        ${ehECA ? 'SISTEMA CRÍTICO' : 'VERIFICAÇÃO PADRÃO'}
-                    </span>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+            resDiv.innerHTML += `
+            <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden; margin-bottom: 25px;">
                 
-                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
-                    <b style="color: var(--neon); display: block; margin-bottom: 5px; font-size: 11px;"><i class="fas fa-eye"></i> 1. NO SOFTWARE (SDP3/TECH TOOL)</b>
-                    <p style="margin: 0; font-size: 14px; color: #ccc;">${item.descricao}</p>
+                <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                    <span style="color: #888; font-size: 11px; font-weight: bold; letter-spacing: 1px;">
+                        <i class="fas fa-microchip"></i> SISTEMA DE DIAGNÓSTICO AVANÇADO
+                    </span>
+                    <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/'/g, "\\'")}', '${item.solucao_vip.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-file-pdf"></i> GERAR RELATÓRIO
+                    </button>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div style="border: 1px solid #333; padding: 10px; border-radius: 6px;">
-                        <b style="color: #ffaa00; font-size: 10px;">TIPO 1: HARDWARE</b>
-                        <p style="margin: 5px 0 0; font-size: 12px; color: #888;">Verificar trilhas da placa e curto-circuito interno.</p>
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                        <div>
+                            <h2 style="margin: 0; font-size: 28px; color: #fff;">${item.codigo}</h2>
+                            <span style="color: var(--neon); font-size: 12px; font-weight: bold;">MÓDULO: ${item.modulo} | ${item.marca.toUpperCase()}</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="badge" style="background: ${ehECA ? 'rgba(255,68,68,0.2)' : 'rgba(0,212,255,0.2)'}; color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; border: 1px solid; padding: 5px 10px;">
+                                ${ehECA ? 'SISTEMA CRÍTICO' : 'VERIFICAÇÃO PADRÃO'}
+                            </span>
+                        </div>
                     </div>
-                    <div style="border: 1px solid #333; padding: 10px; border-radius: 6px;">
-                        <b style="color: #ffaa00; font-size: 10px;">TIPO 2: CONECTIVIDADE</b>
-                        <p style="margin: 5px 0 0; font-size: 12px; color: #888;">Verificar oxidação nos pinos e chicote intermitente.</p>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                        <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
+                            <b style="color: var(--neon); display: block; margin-bottom: 5px; font-size: 11px;"><i class="fas fa-eye"></i> 1. NO SOFTWARE (SDP3/TECH TOOL)</b>
+                            <p style="margin: 0; font-size: 14px; color: #ccc;">${item.descricao}</p>
+                        </div>
+
+                        <div style="background: rgba(0,255,0,0.05); border: 1px solid rgba(0,255,0,0.2); padding: 15px; border-radius: 8px;">
+                            <b style="color: #00ff00; display: block; margin-bottom: 5px; font-size: 11px;"><i class="fas fa-bolt"></i> 2. TESTE DE GRANDEZA ELÉTRICA</b>
+                            <div style="font-family: monospace; font-size: 13px; color: #fff;">
+                                Sinal esperado: <span style="color: #00ff00;">0.15V ~ 3.70V</span><br>
+                                Resistência CAN: <span style="color: #00ff00;">60 Ohms (nominal)</span>
+                            </div>
+                        </div>
+
+                        ${htmlExtra}
+
+                        <div style="background: var(--neon); color: #000; padding: 15px; border-radius: 8px; font-weight: bold;">
+                            <i class="fas fa-tools"></i> 3. PROCEDIMENTO MASTER EURO DIESEL
+                            <p style="margin: 5px 0 0; font-size: 15px;">${item.solucao_vip}</p>
+                        </div>
                     </div>
+
+                    ${rDesteDTC.length > 0 ? `
+                        <div style="margin-top: 20px; border-top: 1px dashed #444; padding-top: 15px;">
+                            <span style="font-size: 11px; color: #888; font-weight: bold;"><i class="fas fa-history"></i> HISTÓRICO DE SUCESSO EM CAMPO</span>
+                            ${rDesteDTC.map(r => `<div class="relato-box" style="background: #111; border-color: #333;">${r.relato}</div>`).join('')}
+                        </div>
+                    ` : ''}
                 </div>
 
-                <div style="background: rgba(0,255,0,0.05); border: 1px solid rgba(0,255,0,0.2); padding: 15px; border-radius: 8px;">
-                    <b style="color: #00ff00; display: block; margin-bottom: 5px; font-size: 11px;"><i class="fas fa-bolt"></i> 2. TESTE DE GRANDEZA ELÉTRICA</b>
-                    <div style="font-family: monospace; font-size: 13px; color: #fff;">
-                        Sinal esperado: <span style="color: #00ff00;">0.15V ~ 3.70V</span><br>
-                        Resistência CAN: <span style="color: #00ff00;">60 Ohms (nominal)</span>
-                    </div>
-                </div>
-
-                <div style="background: var(--neon); color: #000; padding: 15px; border-radius: 8px; font-weight: bold;">
-                    <i class="fas fa-tools"></i> 3. PROCEDIMENTO MASTER EURO DIESEL
-                    <p style="margin: 5px 0 0; font-size: 15px;">${item.solucao_vip}</p>
-                </div>
-            </div>
-
-            ${rDesteDTC.length > 0 ? `
-                <div style="margin-top: 20px; border-top: 1px dashed #444; padding-top: 15px;">
-                    <span style="font-size: 11px; color: #888; font-weight: bold;"><i class="fas fa-history"></i> HISTÓRICO DE SUCESSO EM CAMPO</span>
-                    ${rDesteDTC.map(r => `<div class="relato-box" style="background: #111; border-color: #333;">${r.relato}</div>`).join('')}
-                </div>
-            ` : ''}
-        </div>
-
-        <button class="btn-relatar" style="background: #222; border: none; padding: 15px; color: var(--neon); font-weight: bold; cursor: pointer; width: 100%;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-            <i class="fas fa-plus"></i> ALIMENTAR INTELIGÊNCIA COM NOVO DIAGNÓSTICO
-        </button>
-    </div>`;
-});
+                <button class="btn-relatar" style="background: #222; border: none; padding: 15px; color: var(--neon); font-weight: bold; cursor: pointer; width: 100%;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
+                    <i class="fas fa-plus"></i> ALIMENTAR INTELIGÊNCIA COM NOVO DIAGNÓSTICO
+                </button>
+            </div>`;
+        });
     } // Fim da função buscarGeral
 
         function iniciarVoz() {
