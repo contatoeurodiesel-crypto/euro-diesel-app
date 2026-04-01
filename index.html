@@ -161,64 +161,68 @@
 
 }); // FECHAMENTO DO falhas.forEach
 </script>
-
-                    ${rDesteDTC.length > 0 ? `
-                        <div style="margin-top: 20px; border-top: 1px dashed #444; padding-top: 15px;">
-                            <span style="font-size: 11px; color: #888; font-weight: bold;"><i class="fas fa-history"></i> HISTÓRICO DE SUCESSO EM CAMPO</span>
-                            ${rDesteDTC.map(r => `<div class="relato-box" style="background: #111; border-color: #333;">${r.relato}</div>`).join('')}
-                        </div>
-                    ` : ''}
-                </div>
-
-                <button class="btn-relatar" style="background: #222; border: none; padding: 15px; color: var(--neon); font-weight: bold; cursor: pointer; width: 100%;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
-                    <i class="fas fa-plus"></i> ALIMENTAR INTELIGÊNCIA COM NOVO DIAGNÓSTICO
-                </button>
-            </div>`;
-        });
+    
+}); // Fim do forEach
     } // Fim da função buscarGeral
 
-        function iniciarVoz() {
-            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'pt-BR';
-            recognition.start();
-            recognition.onresult = (e) => {
-                document.getElementById('dtcInput').value = e.results[0][0].transcript.toUpperCase().replace(".","");
-                buscarGeral();
-            };
-        }
+    // ADICIONE ESTA FUNÇÃO QUE ESTAVA FALTANDO
+    async function initDashboard() {
+        try {
+            const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
+            const { count: v } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
+            document.getElementById('countScania').innerText = s || 0;
+            document.getElementById('countVolvo').innerText = v || 0;
+            document.getElementById('countParams').innerText = "OK";
+        } catch (e) { console.error("Erro no Dashboard", e); }
+    }
 
-        async function enviarRelato(cod, mar) {
-            const txt = prompt("Como você resolveu esse problema?");
-            if (txt) {
-                await supabaseClient.from('relatos_usuarios').insert([{ dtc_vinculado: cod, marca: mar, relato: txt, usuario_nome: 'Leandro', status_info: 'pendente' }]);
-                alert("Enviado para moderação!");
-                buscarGeral();
-            }
-        }
+    function iniciarVoz() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'pt-BR';
+        recognition.start();
+        recognition.onresult = (e) => {
+            document.getElementById('dtcInput').value = e.results[0][0].transcript.toUpperCase().replace(".","");
+            buscarGeral();
+        };
+    }
 
-        function gerarLaudo(codigo, marca, modulo, desc, solucao) {
-    const win = window.open('', '_blank');
-    win.document.write(`
-        <html><head><title>Laudo - ${codigo}</title><style>
-            body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.5; }
-            .header { border-bottom: 3px solid #00d4ff; padding-bottom: 10px; margin-bottom: 20px; }
-            .logo { font-size: 24px; font-weight: bold; color: #00d4ff; }
-            .box { background: #f4f4f4; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #ddd; }
-            h3 { color: #00d4ff; margin-top: 20px; border-bottom: 1px solid #eee; }
-            .footer { margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; text-align: center; font-size: 12px; }
-        </style></head><body>
-            <div class="header"><div class="logo">EURO DIESEL MECATRÔNICA</div></div>
-            <div class="box"><b>VEÍCULO:</b> ${marca.toUpperCase()} | <b>MÓDULO:</b> ${modulo} | <b>CÓDIGO:</b> ${codigo}</div>
-            <h3>DIAGNÓSTICO TÉCNICO</h3><p>${desc}</p>
-            <h3>PROCEDIMENTO DE REPARO</h3><p>${solucao}</p>
-            <div class="footer"><b>Responsável Técnico: Leandro - Euro Diesel</b></div>
-            <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
-        </body></html>
-    `);
-    win.document.close();
-}
-        
-        window.onload = initDashboard;
-    </script>
+    async function enviarRelato(cod, mar) {
+        const txt = prompt("Como você resolveu esse problema?");
+        if (txt) {
+            await supabaseClient.from('relatos_usuarios').insert([{ dtc_vinculado: cod, marca: mar, relato: txt, usuario_nome: 'Leandro', status_info: 'pendente' }]);
+            alert("Enviado para moderação!");
+            buscarGeral();
+        }
+    }
+
+    function gerarLaudo(codigo, marca, modulo, desc, solucao) {
+        const win = window.open('', '_blank');
+        win.document.write(`
+            <html><head><title>Laudo - ${codigo}</title><style>
+                body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.5; }
+                .header { border-bottom: 3px solid #00d4ff; padding-bottom: 10px; margin-bottom: 20px; }
+                .logo { font-size: 24px; font-weight: bold; color: #00d4ff; }
+                .box { background: #f4f4f4; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #ddd; }
+                h3 { color: #00d4ff; margin-top: 20px; border-bottom: 1px solid #eee; }
+                .footer { margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; text-align: center; font-size: 12px; }
+            </style></head><body>
+                <div class="header"><div class="logo">EURO DIESEL MECATRÔNICA</div></div>
+                <div class="box"><b>VEÍCULO:</b> \${marca.toUpperCase()} | <b>MÓDULO:</b> \${modulo} | <b>CÓDIGO:</b> \${codigo}</div>
+                <h3>DIAGNÓSTICO TÉCNICO</h3><p>\${desc}</p>
+                <h3>PROCEDIMENTO DE REPARO</h3><p>\${solucao}</p>
+                <div class="footer"><b>Responsável Técnico: Leandro - Euro Diesel</b></div>
+                <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
+            </body></html>
+        `);
+        win.document.close();
+    }
+
+    function acessoAdmin() {
+        let senha = prompt("Acesso Restrito:");
+        if(senha === "1234") window.location.href = "admin.html";
+    }
+
+    window.onload = initDashboard;
+</script>
 </body>
 </html>
