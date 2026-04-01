@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EURO DTC - Master Intelligence</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { 
-    --neon: #00d4ff; 
-    --bg: #0a0a0a; 
-    --card: #151515; 
-    --vip: #ffaa00; 
-    --danger: #ff4444; /* ADICIONE ESTA LINHA */
-}
+            --neon: #00d4ff; 
+            --bg: #0a0a0a; 
+            --card: #151515; 
+            --vip: #ffaa00; 
+            --danger: #ff4444;
+        }
         body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
         .neon-text { color: var(--neon); text-shadow: 0 0 15px var(--neon); text-align: center; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; user-select: none; }
         .dashboard { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
@@ -25,9 +25,10 @@
         input { flex: 1; padding: 12px; border: none; background: transparent; color: #fff; outline: none; font-size: 16px; }
         .btn-voz { background: none; border: none; color: var(--neon); font-size: 20px; cursor: pointer; padding: 0 10px; }
         .btn-busca { background: var(--neon); color: #000; padding: 12px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .relato-box { padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 13px; line-height: 1.4; background: rgba(255, 255, 255, 0.05); }
+        .relato-box { padding: 12px; margin-top: 10px; border-radius: 6px; font-size: 13px; line-height: 1.4; background: rgba(255, 255, 255, 0.05); border-left: 3px solid var(--neon); }
         .btn-relatar { background: transparent; border: 1px solid #444; color: #888; padding: 8px; border-radius: 6px; width: 100%; margin-top: 15px; cursor: pointer; font-size: 11px; }
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; background: #333; }
+        .btn-pdf { background: #555; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; }
     </style>
 </head>
 <body>
@@ -51,63 +52,70 @@
     <div id="resultado"></div>
 
     <script>
-        // Configurações Base
         const _URL = "https://dslhbphcegqgsraxvsgd.supabase.co";
-const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
+        const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s";
         const supabaseClient = supabase.createClient(_URL, _KEY);
 
-        // 1. Acesso Secreto
         function acessoAdmin() {
             const senha = prompt("Acesso Restrito. Digite o código mestre:");
-            if (senha === "1234") { 
-                window.location.href = "admin.html";
-            } else {
-                alert("Acesso negado.");
-            }
+            if (senha === "1234") { window.location.href = "admin.html"; }
+            else { alert("Acesso negado."); }
         }
 
-        // 2. Dashboard
         async function initDashboard() {
             try {
-                // Adicionamos um pequeno delay para garantir que a conexão Supabase esteja ativa
-                const { count: s, error: errS } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
-                const { count: v, error: errV } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
-                const { count: p, error: errP } = await supabaseClient.from('parametros_programacao').select('*', { count: 'exact', head: true });
+                const { count: s } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Scania');
+                const { count: v } = await supabaseClient.from('falhas_dtc').select('*', { count: 'exact', head: true }).ilike('marca', 'Volvo');
+                const { count: p } = await supabaseClient.from('parametros_programacao').select('*', { count: 'exact', head: true });
                 
-                if(errS || errV || errP) {
-                    console.warn("Aguardando resposta do banco...");
-                    // Tenta novamente após 2 segundos se falhar
-                    setTimeout(initDashboard, 2000);
-                    return;
-                }
-
-                document.getElementById('countScania').innerText = s !== null ? s : 0;
-                document.getElementById('countVolvo').innerText = v !== null ? v : 0;
-                document.getElementById('countParams').innerText = p !== null ? p : 0;
-            } catch (e) { 
-                console.error("Erro no Dashboard:", e); 
-            }
+                document.getElementById('countScania').innerText = s ?? 0;
+                document.getElementById('countVolvo').innerText = v ?? 0;
+                document.getElementById('countParams').innerText = p ?? 0;
+            } catch (e) { console.error("Erro Dashboard:", e); }
         }
 
         async function buscarGeral() {
-    let buscaRaw = document.getElementById('dtcInput').value.trim();
-    const resDiv = document.getElementById('resultado');
-    resDiv.innerHTML = "Buscando...";
+            let buscaRaw = document.getElementById('dtcInput').value.trim();
+            if(!buscaRaw) return;
+            const resDiv = document.getElementById('resultado');
+            resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Localizando Diagnóstico...</p>";
 
-    // Teste simples: busca tudo se o campo estiver vazio para ver se o banco responde
-    const { data: falhas, error } = await supabaseClient
-        .from('falhas_dtc')
-        .select('*')
-        .limit(10); // Puxa as 10 primeiras para teste
+            // Busca Falhas e Relatos aprovados
+            const { data: falhas, error: errF } = await supabaseClient.from('falhas_dtc').select('*').or(`codigo.eq.${buscaRaw},descricao.ilike.%${buscaRaw}%`);
+            const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').eq('dtc_vinculado', buscaRaw).neq('status_info', 'pendente');
 
-    if (error) {
-        resDiv.innerHTML = "Erro na conexão: " + error.message;
-        return;
-    }
+            resDiv.innerHTML = "";
+            if (errF || (!falhas?.length && !relatos?.length)) {
+                resDiv.innerHTML = `<div class='card'>Nenhuma informação encontrada para "${buscaRaw}".</div>`;
+                return;
+            }
 
-    resDiv.innerHTML = "Sucesso! Encontrei " + falhas.length + " falhas.";
-}
-        // 4. Voz e Relatos
+            falhas.forEach(item => {
+                const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
+                const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+
+                resDiv.innerHTML += `
+                <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0;">
+                    <div style="background: #222; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                        <span style="color: ${ehECA ? '#ff4444' : 'var(--neon)'}; font-weight: bold;">${item.marca} | ${item.modulo}</span>
+                        <button class="btn-pdf" onclick="alert('Gerando PDF...')">LAUDO</button>
+                    </div>
+                    <div style="padding: 20px;">
+                        <h2 style="margin: 0 0 10px 0;">CÓDIGO: ${item.codigo}</h2>
+                        <p><b>Descrição:</b> ${item.descricao}</p>
+                        <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 5px; margin: 10px 0;">
+                            <b style="color: #ffaa00; font-size: 11px;">CAUSAS PROVÁVEIS:</b><br>${item.causas_provaveis || 'Verificar chicote e alimentação.'}
+                        </div>
+                        <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 10px; border-radius: 5px;">
+                            <b style="color: ${ehECA ? '#00ff00' : 'var(--neon)'}; font-size: 11px;">AÇÃO RECOMENDADA:</b><br>${item.solucao_vip || 'Realizar testes de continuidade.'}
+                        </div>
+                        ${rDesteDTC.map(r => `<div class="relato-box"><b>CASO REAL:</b> ${r.relato}</div>`).join('')}
+                    </div>
+                    <button class="btn-relatar" onclick="enviarRelato('${item.codigo}', '${item.marca}')">ADICIONAR EXPERIÊNCIA</button>
+                </div>`;
+            });
+        }
+
         function iniciarVoz() {
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             recognition.lang = 'pt-BR';
@@ -121,7 +129,7 @@ const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
         async function enviarRelato(cod, mar) {
             const txt = prompt("Como você resolveu esse problema?");
             if (txt) {
-                await supabaseClient.from('relatos_usuarios').insert([{ dtc_vinculado: cod, marca: mar, relato: txt, usuario_nome: 'Leandro' }]);
+                await supabaseClient.from('relatos_usuarios').insert([{ dtc_vinculado: cod, marca: mar, relato: txt, usuario_nome: 'Leandro', status_info: 'pendente' }]);
                 alert("Enviado para moderação!");
                 buscarGeral();
             }
