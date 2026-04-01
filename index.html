@@ -124,49 +124,60 @@
     }
 
     // 4. Renderização com distinção de Marca e Módulo
-    falhas.forEach(item => {
-        // Estilo dinâmico: Vermelho para Scania/ECA, Azul/Neon para outros
-        const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
-        const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
+    // ... (Mantenha o início da função buscarGeral igual até a parte do forEach)
 
-        resDiv.innerHTML += `
-        <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden;">
-            <div style="background: #222; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
-                <span style="color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; font-weight: bold; letter-spacing: 1px; font-size: 12px;">
-                    <i class="fas fa-truck-moving"></i> ${item.marca.toUpperCase()} | MÓDULO: ${item.modulo}
-                </span>
-                <button class="btn-pdf" onclick="alert('Gerando Laudo de Diagnóstico...')">LAUDO TÉCNICO</button>
-            </div>
+        falhas.forEach(item => {
+            const ehECA = item.modulo === 'ECA' || item.codigo.startsWith('50');
+            const rDesteDTC = relatos?.filter(r => r.dtc_vinculado === item.codigo) || [];
 
-            <div style="padding: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                    <h2 style="margin: 0; font-size: 24px; color: #fff;">DTC: ${item.codigo}</h2>
-                    <span class="badge" style="background: ${ehECA ? 'rgba(255,0,0,0.1)' : 'rgba(0,212,255,0.1)'}; color: ${ehECA ? 'red' : 'var(--neon)'}; border: 1px solid;">
-                        ${item.modulo}
+            resDiv.innerHTML += `
+            <div class='card' style="border-left: 4px solid ${ehECA ? 'var(--danger)' : 'var(--neon)'}; padding: 0; overflow: hidden;">
+                <div style="background: #222; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                    <span style="color: ${ehECA ? 'var(--danger)' : 'var(--neon)'}; font-weight: bold; letter-spacing: 1px; font-size: 12px;">
+                        <i class="fas fa-truck-moving"></i> ${item.marca.toUpperCase()} | MÓDULO: ${item.modulo}
                     </span>
+                    <button class="btn-pdf" onclick="alert('Gerando Laudo de Diagnóstico...')">LAUDO TÉCNICO</button>
+                </div>
+
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                        <h2 style="margin: 0; font-size: 24px; color: #fff;">DTC: ${item.codigo}</h2>
+                        <span class="badge" style="background: ${ehECA ? 'rgba(255,0,0,0.1)' : 'rgba(0,212,255,0.1)'}; color: ${ehECA ? 'red' : 'var(--neon)'}; border: 1px solid;">
+                            ${item.modulo}
+                        </span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div>
+                            <b style="color: var(--neon); text-transform: uppercase; font-size: 10px; letter-spacing: 1px;">1. Descrição Software</b>
+                            <p style="margin: 5px 0; color: #ccc; line-height: 1.4;">${item.descricao}</p>
+                        </div>
+
+                        <div style="background: rgba(255,170,0,0.05); padding: 12px; border-radius: 6px; border-left: 2px solid #ffaa00;">
+                            <b style="color: #ffaa00; text-transform: uppercase; font-size: 10px;">2. Causas Prováveis (Checklist)</b>
+                            <p style="margin: 5px 0; color: #eee; font-style: italic;">${item.causas_provaveis || 'Verificar alimentação, chicote e conectores da rede CAN.'}</p>
+                        </div>
+
+                        <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 12px; border-radius: 6px; background: ${ehECA ? 'rgba(255,0,0,0.05)' : 'rgba(0,212,255,0.05)'}">
+                            <b style="color: ${ehECA ? '#ff4444' : '#00ff00'}; text-transform: uppercase; font-size: 10px;">3. Solução VIP Master Intelligence</b>
+                            <p style="margin: 5px 0; color: #fff; font-weight: 500; line-height: 1.4;">${item.solucao_vip}</p>
+                        </div>
+                    </div>
+
+                    ${rDesteDTC.length > 0 ? `
+                        <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
+                            <span style="font-size: 11px; color: #888; font-weight: bold; text-transform: uppercase;"><i class="fas fa-tools"></i> Experiência de Campo</span>
+                            ${rDesteDTC.map(r => `<div class="relato-box">${r.relato}</div>`).join('')}
+                        </div>
+                    ` : ''}
                 </div>
                 
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <b style="color: var(--neon); text-transform: uppercase; font-size: 10px; letter-spacing: 1px;">1. Descrição Software</b>
-                        <p style="margin: 5px 0; color: #ccc; line-height: 1.4;">${item.descricao}</p>
-                    </div>
-
-                    <div style="background: rgba(255,170,0,0.05); padding: 12px; border-radius: 6px; border-left: 2px solid #ffaa00;">
-                        <b style="color: #ffaa00; text-transform: uppercase; font-size: 10px;">2. Causas Prováveis (Checklist)</b>
-                        <p style="margin: 5px 0; color: #eee; font-style: italic;">${item.causas_provaveis || 'Verificar alimentação, chicote e conectores da rede CAN.'}</p>
-                    </div>
-
-                    <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 12px; border-radius: 6px; background: ${ehECA ? 'rgba(255,0,0,0.05)' : 'rgba(0,212,255,0.05)'}">
-                        <b style="color: ${ehECA ? '#ff4444' : '#00ff00'}; text-transform: uppercase; font-size: 10px;">3. Solução VIP Master Intelligence</b>
-                        <p style="margin: 5px 0; color: #fff; font-weight: 500; line-height: 1.4;">${item.solucao_vip}</p>
-                    </div>
-                </div>
-
-                ${rDesteDTC.length > 0 ? `
-                    <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
-                        <span style="font-size: 11px; color: #888; font-weight: bold; text-transform: uppercase;"><i class="fas fa-tools"></i> Experiência de Campo</span>
-                        ${rDesteDTC.map(r => `<div class="relato-box"
+                <button class="btn-relatar" style="border-radius: 0; border: none; background: #1a1a1a; padding: 12px;" onclick="enviarRelato('${item.codigo}', '${item.marca}')">
+                    <i class="fas fa-plus-circle"></i> ADICIONAR EXPERIÊNCIA TÉCNICA
+                </button>
+            </div>`;
+        });
+    } // Fim da função buscarGeral
 
         function iniciarVoz() {
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
