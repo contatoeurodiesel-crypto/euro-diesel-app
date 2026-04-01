@@ -156,21 +156,29 @@
                     </div>
                     
                     <div style="display: flex; flex-direction: column; gap: 15px;">
-                        <div>
-                            <b style="color: var(--neon); text-transform: uppercase; font-size: 10px; letter-spacing: 1px;">1. Descrição Software</b>
-                            <p style="margin: 5px 0; color: #ccc; line-height: 1.4;">${item.descricao}</p>
-                        </div>
+                    <div>
+                        <b style="color: var(--neon); text-transform: uppercase; font-size: 10px; letter-spacing: 1px;">1. Diagnóstico do Software</b>
+                        <p style="margin: 5px 0; color: #ccc; line-height: 1.4;">${item.descricao}</p>
+                    </div>
 
-                        <div style="background: rgba(255,170,0,0.05); padding: 12px; border-radius: 6px; border-left: 2px solid #ffaa00;">
-                            <b style="color: #ffaa00; text-transform: uppercase; font-size: 10px;">2. Causas Prováveis (Checklist)</b>
-                            <p style="margin: 5px 0; color: #eee; font-style: italic;">${item.causas_provaveis || 'Verificar alimentação, chicote e conectores da rede CAN.'}</p>
-                        </div>
+                    <div style="background: rgba(255,170,0,0.05); padding: 12px; border-radius: 6px; border-left: 2px solid #ffaa00;">
+                        <b style="color: #ffaa00; text-transform: uppercase; font-size: 10px;">2. Onde olhar primeiro (Checklist)</b>
+                        <p style="margin: 5px 0; color: #eee; font-style: italic;">${item.causas_provaveis || 'Verificar alimentação 24V e integridade da rede CAN.'}</p>
+                    </div>
 
-                        <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 12px; border-radius: 6px; background: ${ehECA ? 'rgba(255,0,0,0.05)' : 'rgba(0,212,255,0.05)'}">
-                            <b style="color: ${ehECA ? '#ff4444' : '#00ff00'}; text-transform: uppercase; font-size: 10px;">3. Solução VIP Master Intelligence</b>
-                            <p style="margin: 5px 0; color: #fff; font-weight: 500; line-height: 1.4;">${item.solucao_vip}</p>
+                    <div style="border: 1px solid ${ehECA ? 'red' : 'var(--neon)'}; padding: 12px; border-radius: 6px; background: ${ehECA ? 'rgba(255,0,0,0.08)' : 'rgba(0,212,255,0.08)'}">
+                        <b style="color: ${ehECA ? '#ff4444' : '#00ff00'}; text-transform: uppercase; font-size: 10px;">3. Solução VIP Master Intelligence</b>
+                        <p style="margin: 5px 0; color: #fff; font-weight: 600; line-height: 1.4;">${item.solucao_vip}</p>
+                        
+                        <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.2); font-size: 11px; color: #00ff00;">
+                            <i class="fas fa-lightbulb"></i> <b>INSIGHT DA IA:</b> 
+                            ${item.modulo === 'EMS' ? 'Cuidado com óleo no chicote! Se o conector estiver úmido, limpe com álcool isopropílico antes de trocar o sensor.' : ''}
+                            ${item.modulo === 'GMS' ? 'Dica: Falhas de engate em Scania geralmente são causadas por baixa pressão de ar ou sensores de posição sujos.' : ''}
+                            ${item.modulo === 'ACM' ? 'Atenção: Sempre teste o Arla com refratômetro. Se estiver acima de 33%, o sistema vai travar o torque.' : ''}
+                            ${!['EMS','GMS','ACM'].includes(item.modulo) ? 'Verifique se a rede CAN está com 60 Ohms de resistência com as baterias desligadas.' : ''}
                         </div>
                     </div>
+                </div>
 
                     ${rDesteDTC.length > 0 ? `
                         <div style="margin-top: 20px; border-top: 1px solid #333; padding-top: 15px;">
