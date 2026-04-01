@@ -125,7 +125,7 @@
             <div class='card' style="border-left: 4px solid var(--danger);">
                 <h3 style="color: var(--danger);">CÓDIGO ${buscaRaw} NÃO LOCALIZADO</h3>
                 <p>O protocolo informado não consta na Master Intelligence. Verifique o módulo ou adicione um relato.</p>
-                <button class="btn-relatar" onclick="enviarRelato('${buscaRaw}', 'Geral')">CADASTRAR FALHA AGORA</button>
+                <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/'/g, "\\'")}', '${item.solucao_vip.replace(/'/g, "\\'")}')">LAUDO TÉCNICO</button>
             </div>`;
         return;
     }
