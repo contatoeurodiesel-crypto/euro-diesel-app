@@ -63,7 +63,6 @@
     const _KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzbGhicGhjZWdxZ3NyYXh2c2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4Mjk1NjgsImV4cCI6MjA5MDQwNTU2OH0.qGS7nMN1EXw2MhOFL8ur-U6zrxYSppOk0puIUpuE--s"; 
     const supabaseClient = supabase.createClient(_URL, _KEY);
 
-    // BANCO DE DADOS DE INTELIGÊNCIA MESTRE
     const inteligenciaDTC = {
         "50000": {
             "modulo": "GMS OPC5 ECA",
@@ -95,7 +94,7 @@
 
         let { data: falhas, error: errF } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', buscaRaw);
         
-        // Lógica de sugestão Scania (Dígito zero no final)
+        // Suporte Scania 4 dígitos
         if ((!falhas || falhas.length === 0) && buscaRaw.startsWith('50') && buscaRaw.length === 4) {
             const { data: fScania } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', buscaRaw + '0');
             if (fScania?.length > 0) { falhas = fScania; buscaRaw = buscaRaw + '0'; }
@@ -132,11 +131,15 @@
                     </div>`;
             }
 
+            // Sanitização simples para evitar erro no botão PDF
+            const descSegura = item.descricao.replace(/'/g, "&apos;").replace(/\n/g, " ");
+            const solSegura = item.solucao_vip.replace(/'/g, "&apos;").replace(/\n/g, " ");
+
             resDiv.innerHTML += `
                 <div class='card' style="border-left: 4px solid var(--neon); padding: 0; overflow: hidden; margin-bottom: 25px;">
                     <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: #888; font-size: 10px;">EURO DIESEL - MECATRÔNICA NACIONAL</span>
-                        <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${item.descricao.replace(/\n/g, ' ')}', '${item.solucao_vip.replace(/\n/g, ' ')}')">GERAR LAUDO</button>
+                        <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${descSegura}', '${solSegura}')">GERAR LAUDO</button>
                     </div>
                     <div style="padding: 20px;">
                         <h2 style="margin:0; font-size: 28px;">${item.codigo}</h2>
@@ -193,20 +196,32 @@
     function gerarLaudo(codigo, marca, modulo, desc, solucao) {
         const win = window.open('', '_blank');
         win.document.write(`
-            <html><head><title>Laudo - ${codigo}</title><style>
-                body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.5; }
-                .header { border-bottom: 3px solid #00d4ff; padding-bottom: 10px; margin-bottom: 20px; }
-                .logo { font-size: 24px; font-weight: bold; color: #00d4ff; }
-                .box { background: #f4f4f4; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #ddd; }
-                h3 { color: #00d4ff; margin-top: 20px; border-bottom: 1px solid #eee; }
-                .footer { margin-top: 50px; border-top: 1px solid #ccc; padding-top: 10px; text-align: center; font-size: 12px; }
+            <html><head><title>Laudo Euro Diesel - \${codigo}</title><style>
+                body { font-family: 'Segoe UI', sans-serif; padding: 40px; color: #333; line-height: 1.5; }
+                .header { border-bottom: 4px solid #00d4ff; padding-bottom: 15px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+                .logo { font-size: 28px; font-weight: bold; color: #00d4ff; letter-spacing: 1px; }
+                .info-box { background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border: 1px solid #dee2e6; }
+                h3 { color: #008fb3; margin-top: 25px; border-left: 4px solid #00d4ff; padding-left: 10px; }
+                .footer { margin-top: 60px; border-top: 1px solid #eee; padding-top: 20px; text-align: center; font-size: 12px; color: #777; }
+                @media print { .no-print { display: none; } }
             </style></head><body>
-                <div class="header"><div class="logo">EURO DIESEL MECATRÔNICA</div></div>
-                <div class="box"><b>VEÍCULO:</b> \${marca.toUpperCase()} | <b>MÓDULO:</b> \${modulo} | <b>CÓDIGO:</b> \${codigo}</div>
-                <h3>DIAGNÓSTICO TÉCNICO</h3><p>\${desc}</p>
-                <h3>PROCEDIMENTO DE REPARO</h3><p>\${solucao}</p>
-                <div class="footer"><b>Responsável Técnico: Leandro - Euro Diesel</b></div>
-                <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
+                <div class="header">
+                    <div class="logo">EURO DIESEL MECATRÔNICA</div>
+                    <div style="text-align:right; font-size: 10px;">RELATÓRIO TÉCNICO OFICIAL</div>
+                </div>
+                <div class="info-box">
+                    <b>VEÍCULO:</b> \${marca.toUpperCase()} <br>
+                    <b>MÓDULO:</b> \${modulo} <br>
+                    <b>CÓDIGO DA FALHA:</b> <span style="font-size: 20px; color: #d9534f;">\${codigo}</span>
+                </div>
+                <h3>DESCRIÇÃO DO SISTEMA</h3><p>\${desc}</p>
+                <h3>PROCEDIMENTO DE REPARO MASTER</h3>
+                <div style="background: #eefdff; padding: 15px; border-radius: 5px; border-left: 5px solid #00d4ff;">\${solucao}</div>
+                <div class="footer">
+                    <b>Responsável Técnico: Leandro - Euro Diesel Mecatrônica</b><br>
+                    Este documento é uma síntese baseada em protocolos avançados de diagnóstico mecatrônico.
+                </div>
+                <script>setTimeout(() => { window.print(); window.close(); }, 700);<\/script>
             </body></html>
         `);
         win.document.close();
