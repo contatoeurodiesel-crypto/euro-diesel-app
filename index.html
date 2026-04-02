@@ -102,42 +102,39 @@
     if(!buscaRaw) return;
     
     const resDiv = document.getElementById('resultado');
-    resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Acessando Protocolos Master Euro Diesel...</p>";
+    resDiv.innerHTML = "<p style='text-align:center; color:var(--neon)'>Consultando Base Oficial Euro Diesel...</p>";
 
-    // Busca no Supabase trazendo as novas colunas técnicas
-    let { data: falhas, error: errF } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', buscaRaw);
+    // Busca no Supabase (trazendo as colunas novas)
+    let { data: falhas, error: errF } = await supabaseClient.from('falhas_dtc')
+        .select('codigo, marca, modulo, descricao, solucao_vip, acao_tecnica, causa_provavel, condicao_deteccao, reacao_sistema')
+        .eq('codigo', buscaRaw);
     
-    // Suporte Scania 4 dígitos (ex: 5018 vira 50180)
-    if ((!falhas || falhas.length === 0) && buscaRaw.length === 4) {
-        const { data: fScania } = await supabaseClient.from('falhas_dtc').select('*').eq('codigo', buscaRaw + '0');
-        if (fScania?.length > 0) { falhas = fScania; buscaRaw = buscaRaw + '0'; }
-    }
-
-    const { data: relatos } = await supabaseClient.from('relatos_usuarios').select('*').eq('dtc_vinculado', buscaRaw).neq('status_info', 'pendente');
-
     resDiv.innerHTML = "";
 
-    if (errF || (!falhas?.length && !relatos?.length)) {
-        resDiv.innerHTML = `<div class='card' style="border-left: 4px solid var(--danger);"><h3 style="color:var(--danger)">CÓDIGO ${buscaRaw} NÃO LOCALIZADO</h3></div>`;
+    if (errF || !falhas?.length) {
+        resDiv.innerHTML = `<div class='card'><h3>CÓDIGO ${buscaRaw} NÃO ENCONTRADO</h3></div>`;
         return;
     }
 
     falhas.forEach(item => {
-        // LÓGICA MESTRE: Tenta pegar do código fixo, se não tiver, pega das colunas do Supabase
-        let infoTecnica = inteligenciaDTC[item.codigo];
+        // PRIORIDADE: Se houver dado oficial no banco (acao_tecnica), usa ele. 
+        // Se não, tenta a lista fixa 'inteligenciaDTC'.
+        let info = null;
         
-        if (!infoTecnica && item.acao_tecnica) {
-            infoTecnica = {
-                acao: item.acao_tecnica.split(';'),
+        if (item.acao_tecnica) {
+            info = {
+                acao: item.acao_tecnica.split(';'), // Transforma o texto em lista
                 causa: item.causa_provavel,
                 deteccao: item.condicao_deteccao,
                 reacao: item.reacao_sistema
             };
+        } else if (typeof inteligenciaDTC !== 'undefined' && inteligenciaDTC[item.codigo]) {
+            info = inteligenciaDTC[item.codigo];
         }
 
-        let htmlConteudoTecnico = '';
-        if (infoTecnica) {
-            htmlConteudoTecnico = `
+        let quadroTecnicoHTML = '';
+        if (info) {
+            quadroTecnicoHTML = `
                 <div style="margin-top: 15px; border: 1px solid #444; border-radius: 8px; background: #1a1e22; overflow: hidden;">
                     <div style="background: #2c3e50; padding: 10px; font-weight: bold; color: var(--neon); font-size: 11px;">
                         <i class="fas fa-microchip"></i> ANÁLISE TÉCNICA AVANÇADA (PADRÃO SDP3)
@@ -145,34 +142,23 @@
                     <div style="padding: 15px; font-size: 13px; line-height: 1.6;">
                         <b style="color:var(--neon)">AÇÃO RECOMENDADA:</b>
                         <ul style="margin: 5px 0 10px 18px; color: #ccc;">
-                            ${infoTecnica.acao.map(a => `<li>${a}</li>`).join('')}
+                            ${info.acao.map(a => `<li>${a.trim()}</li>`).join('')}
                         </ul>
-                        <b style="color:var(--neon)">CAUSA PROVÁVEL:</b> <p style="margin: 0 0 10px 0; color:#ccc;">${infoTecnica.causa || 'Verificar integridade do sistema.'}</p>
-                        <b style="color:var(--neon)">CONDIÇÃO DE DETECÇÃO:</b> <p style="margin: 0 0 10px 0; color:#ccc;">${infoTecnica.deteccao || 'Sinal fora da faixa nominal.'}</p>
-                        <b style="color:var(--danger)">REAÇÃO DO SISTEMA:</b> <p style="margin: 0; color:#ffaaaa;">${infoTecnica.reacao || 'Redução de torque ou modo de emergência.'}</p>
+                        <b style="color:var(--neon)">CAUSA PROVÁVEL:</b> <p style="margin: 0 0 10px 0; color:#ccc;">${info.causa}</p>
+                        <b style="color:var(--neon)">CONDIÇÃO DE DETECÇÃO:</b> <p style="margin: 0 0 10px 0; color:#ccc;">${info.deteccao}</p>
+                        <b style="color:var(--danger)">REAÇÃO DO SISTEMA:</b> <p style="margin: 0; color:#ffaaaa;">${info.reacao}</p>
                     </div>
                 </div>`;
         }
 
-        const descSegura = item.descricao.replace(/'/g, "&apos;").replace(/\n/g, " ");
-        const solSegura = item.solucao_vip.replace(/'/g, "&apos;").replace(/\n/g, " ");
-
         resDiv.innerHTML += `
-            <div class='card' style="border-left: 4px solid var(--neon); padding: 0; overflow: hidden; margin-bottom: 25px;">
-                <div style="background: #1a1a1a; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: #888; font-size: 10px;">EURO DIESEL - MECATRÔNICA NACIONAL</span>
-                    <button class="btn-pdf" onclick="gerarLaudo('${item.codigo}', '${item.marca}', '${item.modulo}', '${descSegura}', '${solSegura}')">GERAR LAUDO</button>
-                </div>
-                <div style="padding: 20px;">
-                    <h2 style="margin:0; font-size: 28px;">${item.codigo}</h2>
-                    <span style="color: var(--neon); font-size: 12px; font-weight: bold;">SISTEMA: ${item.modulo} | MARCA: ${item.marca}</span>
-                    <p style="background:rgba(255,255,255,0.03); padding:12px; border-radius:6px; color:#ddd; border: 1px solid #333; margin-top:10px;">
-                        <b>DESCRIÇÃO:</b> ${item.descricao}
-                    </p>
-                    ${htmlConteudoTecnico} 
-                    <div style="margin-top:15px; background: linear-gradient(90deg, #00d4ff, #008fb3); color:#000; padding:15px; border-radius:8px; font-weight:bold;">
-                        <i class="fas fa-check-circle"></i> SOLUÇÃO MASTER: ${item.solucao_vip}
-                    </div>
+            <div class='card' style="border-left: 4px solid var(--neon); margin-bottom: 25px;">
+                <h2 style="margin:0;">${item.codigo}</h2>
+                <small style="color: var(--neon)">${item.marca} | ${item.modulo}</small>
+                <p><b>DESCRIÇÃO:</b> ${item.descricao}</p>
+                ${quadroTecnicoHTML}
+                <div style="margin-top:15px; background: #00d4ff; color:#000; padding:10px; border-radius:5px; font-weight:bold;">
+                    SOLUÇÃO MASTER: ${item.solucao_vip}
                 </div>
             </div>`;
     });
